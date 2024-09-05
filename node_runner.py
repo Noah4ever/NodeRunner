@@ -1,8 +1,34 @@
 import bpy
 import pickle
+import zlib
 import base64
 import mathutils
-import zlib
+import inspect
+
+
+# Add all possible nodes
+def create_all_nodes():
+    i = 0
+    location_x = 0
+    location_y = 0
+    for dad in dir(bpy.types):
+        real_type = getattr(bpy.types, dad)
+        if inspect.isclass(real_type) and issubclass(real_type, bpy.types.ShaderNode):
+            try:
+                i = i + 1
+                node = bpy.context.object.active_material.node_tree.nodes.new(type=dad)
+                node.width = 250
+                node.location = (location_x, location_y)
+                location_x += 300
+                if location_x > 4000:
+                    location_x = 0
+                    location_y -= 450
+            except:
+                print("set this")
+                pass
+
+
+create_all_nodes()
 
 
 def serialize_color(color):
@@ -157,7 +183,6 @@ def deserialize_curve_mapping(node, data):
     node.mapping.tone = data.get("tone", 0)
     node.mapping.use_clip = data.get("use_clip", 0)
     node.mapping.white_level = data.get("white_level", (0.0, 0.0, 0.0))
-    pass
 
 
 def serialize_curve_map(node, curve_map):
@@ -366,30 +391,6 @@ def decode_data(base64_encoded, material):
         node_tree.links.new(input_socket, output_socket)
 
 
-# Add all possible nodes
-import inspect
-
-i = 0
-location_x = 0
-location_y = 0
-for dad in dir(bpy.types):
-    continue
-    real_type = getattr(bpy.types, dad)
-    if inspect.isclass(real_type) and issubclass(real_type, bpy.types.ShaderNode):
-        try:
-            i = i + 1
-            node = bpy.context.object.active_material.node_tree.nodes.new(type=dad)
-            node.width = 250
-            node.location = (location_x, location_y)
-            location_x += 300
-            if location_x > 4000:
-                location_x = 0
-                location_y -= 450
-        except:
-            print("set this")
-            pass
-
-
 class NodeRunnerImport(bpy.types.Operator):
     bl_idname = "object.node_runner_import"
     bl_label = "Node Runner Import"
@@ -428,28 +429,18 @@ class NodeRunnerExport(bpy.types.Operator):
 
     def invoke(self, context, event):
         wm = context.window_manager
-
-        # Get the active material from the context
         material = bpy.context.object.active_material
         if not material or not hasattr(material, "node_tree"):
             self.report({"ERROR"}, "No valid material with a node tree selected")
             return {"CANCELLED"}
 
-        # Get selected nodes using bpy.context.selected_nodes
         selected_nodes = bpy.context.selected_nodes
-
-        if not selected_nodes:
-            self.report({"WARNING"}, "No nodes selected. Exporting all nodes.")
-            selected_node_names = None  # Will default to all nodes in encode_data
-        else:
-            # Get the names of the selected nodes
-            selected_node_names = [node.name for node in selected_nodes]
-
-        # Encode data with the selected nodes
+        selected_node_names = (
+            [node.name for node in selected_nodes] if selected_nodes else None
+        )
         self.my_node_runner_string = encode_data(
             material, selected_node_names=selected_node_names
         )
-        # Trigger the props dialog to show the result
         return wm.invoke_props_dialog(self)
 
 
@@ -493,7 +484,6 @@ def menu_func_node_runner_import(self, context):
     )
 
 
-# Register the operator
 def register():
     bpy.utils.register_class(NodeRunnerImportContextMenu)
     bpy.utils.register_class(NodeRunnerExportContextMenu)
