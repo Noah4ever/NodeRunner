@@ -2,6 +2,7 @@ import bpy
 import pickle
 import base64
 import mathutils
+import zlib
 
 
 def serialize_color(color):
@@ -111,21 +112,14 @@ def deserialize_texture_mapping(node, data):
 def serialize_inputs(node):
     """Serialize inputs"""
     data = []
-
     for input in node.inputs:
         if not hasattr(input, "default_value"):
             continue
-
         value = input.default_value
-
-        if isinstance(input, bpy.types.NodeSocketVector):
-            data.append(serialize_vector(value))
-        elif isinstance(input, bpy.types.NodeSocketColor):
-            data.append(serialize_color(value))
-        elif isinstance(value, mathutils.Euler):
-            data.append(serialize_euler(value))
+        if isinstance(input, (bpy.types.NodeSocketVector, bpy.types.NodeSocketColor)):
+            data.append(serialize_attr(input, value))
         else:
-            data.append(value)
+            data.append(serialize_attr(node, value))
     return data
 
 
@@ -134,6 +128,101 @@ def deserialize_inputs(node, data):
     for i, input in enumerate(data):
         if hasattr(node.inputs[i], "default_value"):
             node.inputs[i].default_value = input
+
+
+def serialize_curve_mapping(node):
+    data = {
+        "black_level": serialize_attr(node, node.mapping.black_level),
+        "clip_max_x": node.mapping.clip_max_x,
+        "clip_max_y": node.mapping.clip_max_y,
+        "clip_min_x": node.mapping.clip_min_x,
+        "clip_min_y": node.mapping.clip_min_y,
+        "curves": serialize_attr(node, node.mapping.curves),  # Serialzing curces
+        "extend": node.mapping.extend,
+        "tone": node.mapping.tone,
+        "use_clip": node.mapping.use_clip,
+        "white_level": serialize_attr(node, node.mapping.white_level),
+    }
+    return data
+
+
+def deserialize_curve_mapping(node, data):
+    node.mapping.black_level = data.get("black_level", (0.0, 0.0, 0.0))
+    node.mapping.clip_max_x = data.get("clip_max_x", 0)
+    node.mapping.clip_max_y = data.get("clip_max_y", 0)
+    node.mapping.clip_min_x = data.get("clip_min_x", 0)
+    node.mapping.clip_min_y = data.get("clip_min_y", 0)
+    node.mapping.curves = data.get("curves", 0)
+    node.mapping.extend = data.get("extend", 0)
+    node.mapping.tone = data.get("tone", 0)
+    node.mapping.use_clip = data.get("use_clip", 0)
+    node.mapping.white_level = data.get("white_level", (0.0, 0.0, 0.0))
+    pass
+
+
+def serialize_curve_map(node, curve_map):
+    data = {
+        "points": serialize_attr(node, curve_map.points),
+    }
+    return data
+
+
+def serialize_curve_map_point(node, curve_map_point):
+    data = {
+        "handle_type": curve_map_point.handle_type,
+        "location": serialize_attr(node, curve_map_point.location),
+        "select": curve_map_point.select,
+    }
+    return data
+
+
+def serialize_attr(node, attr):
+    data = attr
+    if isinstance(data, mathutils.Color):
+        data = serialize_color(data)  # Color
+    elif isinstance(data, mathutils.Vector):
+        data = serialize_vector(data)  # Vector
+    elif isinstance(data, mathutils.Euler):
+        data = serialize_euler(data)  # Euler
+    elif isinstance(data, bpy.types.ColorRamp):
+        data = serialize_color_ramp(node)  # Color Ramp
+    elif isinstance(data, bpy.types.ColorMapping):
+        data = serialize_color_mapping(node)  # Color Mapping
+    elif isinstance(data, bpy.types.TexMapping):
+        data = serialize_texture_mapping(node)  # Texture Mapping
+    elif isinstance(data, bpy.types.CurveMapping):
+        data = serialize_curve_mapping(node)  # Texture Mapping
+    elif isinstance(data, bpy.types.CurveMap):
+        data = serialize_curve_map(node, attr)  # Texture Mapping
+    elif isinstance(data, bpy.types.CurveMapPoint):
+        data = serialize_curve_map_point(node, attr)  # Texture Mapping
+    elif isinstance(data, bpy.types.NodeSocketStandard):
+        if hasattr(data, "default_value"):
+            data = serialize_attr(node, data.default_value)
+        else:
+            data = None
+    elif isinstance(data, bpy.types.bpy_prop_collection):
+        result = []
+        for element in data.values():
+            result.append(serialize_attr(node, element))
+        data = result
+    elif isinstance(data, bpy.types.bpy_prop_array):
+        result = []
+        for element in data:
+            result.append(serialize_attr(node, element))
+        data = result
+    try:
+        pickle.dumps(data)
+    except:
+        print(
+            "Serializing error on:",
+            node.name,
+            "with data:",
+            data,
+            "and type:",
+            type(data),
+        )
+    return data
 
 
 def serialize_node(node):
@@ -178,23 +267,9 @@ def serialize_node(node):
 
     for prop in [p for p in dir(node) if p not in exclude_props]:
         attr = getattr(node, prop)
-        if isinstance(attr, mathutils.Color):
-            node_dict[prop] = serialize_color(attr)  # Color
-        elif isinstance(attr, mathutils.Vector):
-            node_dict[prop] = serialize_vector(attr)  # Vector
-        elif isinstance(attr, bpy.types.ColorRamp):
-            node_dict[prop] = serialize_color_ramp(node)  # Color Ramp
-        elif isinstance(attr, bpy.types.ColorMapping):
-            node_dict[prop] = serialize_color_mapping(node)  # Color Mapping
-        elif isinstance(attr, bpy.types.TexMapping):
-            node_dict[prop] = serialize_texture_mapping(node)  # Texture Mapping
-        elif prop == "inputs":
-            node_dict[prop] = serialize_inputs(node)  # Inputs
-        else:
-            node_dict[prop] = attr
-
+        node_dict[prop] = serialize_attr(node, attr)
     node_dict["type"] = node.bl_idname
-
+    print("Finished serializing node: ", node.name)
     return node_dict
 
 
@@ -216,37 +291,55 @@ def deserialize_node(node_data, nodes):
             deserialize_texture_mapping(new_node, prop_value)
         elif prop_name == "inputs":
             deserialize_inputs(new_node, prop_value)
+        elif prop_name == "mapping":
+            deserialize_curve_mapping(new_node, prop_value)
         else:
             setattr(new_node, prop_name, prop_value)
     return new_node
 
 
-# TODO: Add support for letting the user select the nodes to export
-def encode_data(material):
+def encode_data(material, selected_node_names=None):
     node_tree = material.node_tree
     nodes = node_tree.nodes
 
+    # Initialize empty data structure for nodes and links
     data = {"nodes": {}, "links": []}
 
-    # Save links
-    for link in node_tree.links:
-        data["links"].append(
-            {
-                "from_node": link.from_node.name,
-                "to_node": link.to_node.name,
-                "from_socket": link.from_socket.name,
-                "to_socket": link.to_socket.name,
-            }
-        )
+    # Check if specific nodes are provided for export, otherwise use all nodes
+    selected_nodes = (
+        nodes
+        if selected_node_names is None
+        else [nodes[node_name] for node_name in selected_node_names]
+    )
 
-    # Serialize nodes
-    for node in nodes:
+    # Save links (only for selected nodes or all if no nodes are selected)
+    print("LINK serialization")
+    for link in node_tree.links:
+        if selected_node_names is None or (
+            link.from_node.name in selected_node_names
+            and link.to_node.name in selected_node_names
+        ):
+            data["links"].append(
+                {
+                    "from_node": link.from_node.name,
+                    "to_node": link.to_node.name,
+                    "from_socket": link.from_socket.name,
+                    "to_socket": link.to_socket.name,
+                }
+            )
+
+    print("NODE serialization")
+    # Serialize selected nodes
+    for node in selected_nodes:
         node_dict = serialize_node(node)
         data["nodes"][node.name] = node_dict
 
     # Encode data (links and nodes)
-    serialized_data = pickle.dumps(data)
-    base64_encoded = base64.b64encode(serialized_data).decode("utf-8")
+    compress_data = zlib.compress(pickle.dumps(data), 9)
+    base64_encoded = base64.b64encode(compress_data).decode("utf-8")
+
+    print(base64_encoded)
+    print(len(base64_encoded))
     return base64_encoded
 
 
@@ -254,7 +347,7 @@ def decode_data(base64_encoded, material):
     node_tree = material.node_tree
     nodes = node_tree.nodes
 
-    deserialized_data = pickle.loads(base64.b64decode(base64_encoded))
+    deserialized_data = pickle.loads(zlib.decompress(base64.b64decode(base64_encoded)))
 
     node_names = {}
 
@@ -273,57 +366,28 @@ def decode_data(base64_encoded, material):
         node_tree.links.new(input_socket, output_socket)
 
 
-for obj in bpy.data.objects:
+# Add all possible nodes
+import inspect
+
+i = 0
+location_x = 0
+location_y = 0
+for dad in dir(bpy.types):
     continue
-    if obj.name == "Cube":
-        material = obj.active_material
-        node_tree = material.node_tree
-        nodes = node_tree.nodes
-
-        data = {"nodes": {}, "links": []}
-
-        # Save links
-        for link in node_tree.links:
-            data["links"].append(
-                {
-                    "from_node": link.from_node.name,
-                    "to_node": link.to_node.name,
-                    "from_socket": link.from_socket.name,
-                    "to_socket": link.to_socket.name,
-                }
-            )
-
-        # Encode nodes
-        for node in nodes:
-            node_dict = serialize_node(node)
-            data["nodes"][node.name] = node_dict
-
-        # Serialize data (links and nodes)
-        serialized_data = pickle.dumps(data)
-        base64_encoded = base64.b64encode(serialized_data).decode("utf-8")
-        print(base64_encoded)
-        print("Encoded Nodes Length", len(base64_encoded))
-
-        # continue
-
-        # deserialize data
-        deserialized_data = pickle.loads(base64.b64decode(base64_encoded))
-
-        node_names = {}
-
-        # Save new node with name for linking
-        for node_name, node_data in deserialized_data["nodes"].items():
-            node_names[node_name] = deserialize_node(
-                node_data, nodes
-            )  # Decode node and return new node
-
-        # Apply links
-        for link_data in deserialized_data["links"]:
-            from_node = node_names[link_data["from_node"]]
-            output_socket = from_node.outputs.get(link_data["from_socket"])
-            to_node = node_names[link_data["to_node"]]
-            input_socket = to_node.inputs.get(link_data["to_socket"])
-            node_tree.links.new(input_socket, output_socket)
+    real_type = getattr(bpy.types, dad)
+    if inspect.isclass(real_type) and issubclass(real_type, bpy.types.ShaderNode):
+        try:
+            i = i + 1
+            node = bpy.context.object.active_material.node_tree.nodes.new(type=dad)
+            node.width = 250
+            node.location = (location_x, location_y)
+            location_x += 300
+            if location_x > 4000:
+                location_x = 0
+                location_y -= 450
+        except:
+            print("set this")
+            pass
 
 
 class NodeRunnerImport(bpy.types.Operator):
@@ -359,20 +423,39 @@ class NodeRunnerExport(bpy.types.Operator):
     )  # type: ignore
 
     def execute(self, context):
-        self.my_node_runner_string = "TEST"
-        # get current material
-        self.report({"INFO"}, "Node Runner Export Main executed")
+        self.report({"INFO"}, "Node Runner Export successful")
         return {"FINISHED"}
 
     def invoke(self, context, event):
         wm = context.window_manager
-        self.my_node_runner_string = encode_data(bpy.context.material)
+
+        # Get the active material from the context
+        material = bpy.context.object.active_material
+        if not material or not hasattr(material, "node_tree"):
+            self.report({"ERROR"}, "No valid material with a node tree selected")
+            return {"CANCELLED"}
+
+        # Get selected nodes using bpy.context.selected_nodes
+        selected_nodes = bpy.context.selected_nodes
+
+        if not selected_nodes:
+            self.report({"WARNING"}, "No nodes selected. Exporting all nodes.")
+            selected_node_names = None  # Will default to all nodes in encode_data
+        else:
+            # Get the names of the selected nodes
+            selected_node_names = [node.name for node in selected_nodes]
+
+        # Encode data with the selected nodes
+        self.my_node_runner_string = encode_data(
+            material, selected_node_names=selected_node_names
+        )
+        # Trigger the props dialog to show the result
         return wm.invoke_props_dialog(self)
 
 
 class NodeRunnerImportContextMenu(bpy.types.Operator):
     bl_idname = "object.node_runner_import_context_menu"
-    bl_label = "Node Runner Import"
+    bl_label = "Node Runner Import Context Menu"
 
     def execute(self, context):
         bpy.ops.object.node_runner_import("INVOKE_DEFAULT")
@@ -386,7 +469,7 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
 
 class NodeRunnerExportContextMenu(bpy.types.Operator):
     bl_idname = "object.node_runner_export_context_menu"
-    bl_label = "Node Runner Export"
+    bl_label = "Node Runner Export Context Menu"
 
     def execute(self, context):
         bpy.ops.object.node_runner_export("INVOKE_DEFAULT")
@@ -398,13 +481,13 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         return wm.invoke_props_dialog(self)
 
 
-def menu_func_NodeRunnerExport(self, context):
+def menu_func_node_runner_export(self, context):
     self.layout.operator(
         NodeRunnerExportContextMenu.bl_idname, text="Node Runner Export"
     )
 
 
-def menu_func_NodeRunnerImport(self, context):
+def menu_func_node_runner_import(self, context):
     self.layout.operator(
         NodeRunnerImportContextMenu.bl_idname, text="Node Runner Import"
     )
@@ -418,13 +501,13 @@ def register():
     bpy.utils.register_class(NodeRunnerExport)
 
     # Add it to the Shader Editor context menu
-    bpy.types.NODE_MT_context_menu.append(menu_func_NodeRunnerImport)
-    bpy.types.NODE_MT_context_menu.append(menu_func_NodeRunnerExport)
+    bpy.types.NODE_MT_context_menu.append(menu_func_node_runner_import)
+    bpy.types.NODE_MT_context_menu.append(menu_func_node_runner_export)
 
 
 def unregister():
-    bpy.types.NODE_MT_context_menu.remove(menu_func_NodeRunnerExport)
-    bpy.types.NODE_MT_context_menu.remove(menu_func_NodeRunnerImport)
+    bpy.types.NODE_MT_context_menu.remove(menu_func_node_runner_export)
+    bpy.types.NODE_MT_context_menu.remove(menu_func_node_runner_import)
 
     bpy.utils.unregister_class(NodeRunnerExport)
     bpy.utils.unregister_class(NodeRunnerImport)
