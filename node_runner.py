@@ -28,7 +28,7 @@ def create_all_nodes():
                 pass
 
 
-create_all_nodes()
+# create_all_nodes()
 
 
 def serialize_color(color):
@@ -369,6 +369,13 @@ def encode_data(material, selected_node_names=None):
 
 
 def decode_data(base64_encoded, material):
+    if not material or not hasattr(material, "node_tree"):
+        material = bpy.data.materials.new(name="Material")
+        if bpy.context.active_object:
+            bpy.context.active_object.data.materials.append(material)
+    print(material)
+    print(material.node_tree)
+    # ERROR node tree is None when no material is assigned
     node_tree = material.node_tree
     nodes = node_tree.nodes
 
