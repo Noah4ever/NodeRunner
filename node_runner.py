@@ -6,31 +6,6 @@ import mathutils
 import inspect
 
 
-# Add all possible nodes
-def create_all_nodes():
-    i = 0
-    location_x = 0
-    location_y = 0
-    for dad in dir(bpy.types):
-        real_type = getattr(bpy.types, dad)
-        if inspect.isclass(real_type) and issubclass(real_type, bpy.types.ShaderNode):
-            try:
-                i = i + 1
-                node = bpy.context.object.active_material.node_tree.nodes.new(type=dad)
-                node.width = 250
-                node.location = (location_x, location_y)
-                location_x += 300
-                if location_x > 4000:
-                    location_x = 0
-                    location_y -= 450
-            except:
-                print("set this")
-                pass
-
-
-# create_all_nodes()
-
-
 def serialize_color(color):
     """Serialize color"""
     return list(color)
@@ -135,25 +110,18 @@ def deserialize_texture_mapping(node, data):
     node.texture_mapping.vector_type = data.get("vector_type", 0)
 
 
-def serialize_inputs(node):
-    """Serialize inputs"""
-    data = []
-    for input in node.inputs:
-        if not hasattr(input, "default_value"):
-            continue
-        value = input.default_value
-        if isinstance(input, (bpy.types.NodeSocketVector, bpy.types.NodeSocketColor)):
-            data.append(serialize_attr(input, value))
-        else:
-            data.append(serialize_attr(node, value))
-    return data
-
-
 def deserialize_inputs(node, data):
     """Deserialize inputs"""
     for i, input in enumerate(data):
         if hasattr(node.inputs[i], "default_value"):
             node.inputs[i].default_value = input
+
+
+def deserialize_outputs(node, data):
+    """Deserialize outputs"""
+    for i, output in enumerate(data):
+        if hasattr(node.outputs[i], "default_value"):
+            node.outputs[i].default_value = output
 
 
 def serialize_curve_mapping(node):
@@ -178,21 +146,26 @@ def deserialize_curve_mapping(node, data):
     node.mapping.clip_max_y = data.get("clip_max_y", 0)
     node.mapping.clip_min_x = data.get("clip_min_x", 0)
     node.mapping.clip_min_y = data.get("clip_min_y", 0)
-    node.mapping.curves = data.get("curves", 0)
+    i = 0
+    for curve_map in data.get("curves", 0):
+        for point in curve_map.get("points"):
+            location = point.get("location", (0.0, 0.0))
+            node.mapping.curves[i].points.new(location[0], location[1])
+        i += 1
     node.mapping.extend = data.get("extend", 0)
     node.mapping.tone = data.get("tone", 0)
     node.mapping.use_clip = data.get("use_clip", 0)
     node.mapping.white_level = data.get("white_level", (0.0, 0.0, 0.0))
 
 
-def serialize_curve_map(node, curve_map):
+def serialize_curve_map(node, curve_map: bpy.types.CurveMap):
     data = {
         "points": serialize_attr(node, curve_map.points),
     }
     return data
 
 
-def serialize_curve_map_point(node, curve_map_point):
+def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
     data = {
         "handle_type": curve_map_point.handle_type,
         "location": serialize_attr(node, curve_map_point.location),
@@ -201,43 +174,65 @@ def serialize_curve_map_point(node, curve_map_point):
     return data
 
 
+def serialize_image(node, image: bpy.types.Image):
+    data = {
+        "name": image.name,
+    }
+    return data
+
+
+def deserialize_image(node, data):
+    image = next(
+        (obj for obj in bpy.context.blend_data.images if obj.name == data.get("name")),
+        None,
+    )
+    if not image:
+        return
+    node.image = image
+
+
 def serialize_attr(node, attr):
     data = attr
-    if isinstance(data, mathutils.Color):
-        data = serialize_color(data)  # Color
-    elif isinstance(data, mathutils.Vector):
-        data = serialize_vector(data)  # Vector
-    elif isinstance(data, mathutils.Euler):
-        data = serialize_euler(data)  # Euler
-    elif isinstance(data, bpy.types.ColorRamp):
-        data = serialize_color_ramp(node)  # Color Ramp
-    elif isinstance(data, bpy.types.ColorMapping):
-        data = serialize_color_mapping(node)  # Color Mapping
-    elif isinstance(data, bpy.types.TexMapping):
-        data = serialize_texture_mapping(node)  # Texture Mapping
-    elif isinstance(data, bpy.types.CurveMapping):
-        data = serialize_curve_mapping(node)  # Texture Mapping
-    elif isinstance(data, bpy.types.CurveMap):
-        data = serialize_curve_map(node, attr)  # Texture Mapping
-    elif isinstance(data, bpy.types.CurveMapPoint):
-        data = serialize_curve_map_point(node, attr)  # Texture Mapping
-    elif isinstance(data, bpy.types.NodeSocketStandard):
+    if isinstance(data, mathutils.Color):  # Color
+        data = serialize_color(data)
+    elif isinstance(data, mathutils.Vector):  # Vector
+        data = serialize_vector(data)
+    elif isinstance(data, mathutils.Euler):  # Euler
+        data = serialize_euler(data)
+    elif isinstance(data, bpy.types.ColorRamp):  # Color Ramp
+        data = serialize_color_ramp(node)
+    elif isinstance(data, bpy.types.ColorMapping):  # Color Mapping
+        data = serialize_color_mapping(node)
+    elif isinstance(data, bpy.types.TexMapping):  # Texture Mapping
+        data = serialize_texture_mapping(node)
+    elif isinstance(data, bpy.types.CurveMapping):  # Curve Mapping
+        data = serialize_curve_mapping(node)
+    elif isinstance(data, bpy.types.CurveMap):  # Curve Map
+        data = serialize_curve_map(node, attr)
+    elif isinstance(data, bpy.types.CurveMapPoint):  # Curve Map Point
+        data = serialize_curve_map_point(node, attr)
+    elif isinstance(data, bpy.types.Image):  # Image
+        data = serialize_image(node, attr)
+    elif isinstance(data, bpy.types.ImageUser):  # Image User
+        return {}
+    elif isinstance(data, bpy.types.NodeSocketStandard):  # Node Socket Standard
         if hasattr(data, "default_value"):
             data = serialize_attr(node, data.default_value)
         else:
             data = None
-    elif isinstance(data, bpy.types.bpy_prop_collection):
+    elif isinstance(data, bpy.types.bpy_prop_collection):  # bpy_prop_collection
         result = []
         for element in data.values():
             result.append(serialize_attr(node, element))
         data = result
-    elif isinstance(data, bpy.types.bpy_prop_array):
+    elif isinstance(data, bpy.types.bpy_prop_array):  # bpy_prop_array
         result = []
         for element in data:
             result.append(serialize_attr(node, element))
         data = result
+
     try:
-        pickle.dumps(data)
+        pickle.dumps(data)  # Try to pickle dump to get error message
     except:
         print(
             "Serializing error on:",
@@ -268,6 +263,9 @@ def serialize_node(node):
         "bl_width_default",
         "bl_width_max",
         "bl_width_min",
+        "cache_point_density",
+        "calc_point_density",
+        "calc_point_density_minmax",
         "dimensions",
         "draw_buttons",
         "draw_buttons_ext",
@@ -285,16 +283,16 @@ def serialize_node(node):
         "type",
         "update",
         "use_custom_color",
-        "outputs",
     ]
 
     node_dict = {}
 
     for prop in [p for p in dir(node) if p not in exclude_props]:
         attr = getattr(node, prop)
+        if attr is None:
+            continue
         node_dict[prop] = serialize_attr(node, attr)
     node_dict["type"] = node.bl_idname
-    print("Finished serializing node: ", node.name)
     return node_dict
 
 
@@ -302,7 +300,7 @@ def deserialize_node(node_data, nodes):
     """Deserialize node properties and add new node"""
     new_node = nodes.new(type=node_data["type"])  # Create new node
 
-    readonly_props = ["type"]
+    readonly_props = ["type", "image_user"]
     for prop_name, prop_value in node_data.items():
         if prop_name in readonly_props:
             continue
@@ -316,8 +314,12 @@ def deserialize_node(node_data, nodes):
             deserialize_texture_mapping(new_node, prop_value)
         elif prop_name == "inputs":
             deserialize_inputs(new_node, prop_value)
+        elif prop_name == "outputs":
+            deserialize_outputs(new_node, prop_value)
         elif prop_name == "mapping":
             deserialize_curve_mapping(new_node, prop_value)
+        elif prop_name == "image":
+            deserialize_image(new_node, prop_value)
         else:
             setattr(new_node, prop_name, prop_value)
     return new_node
@@ -331,14 +333,9 @@ def encode_data(material, selected_node_names=None):
     data = {"nodes": {}, "links": []}
 
     # Check if specific nodes are provided for export, otherwise use all nodes
-    selected_nodes = (
-        nodes
-        if selected_node_names is None
-        else [nodes[node_name] for node_name in selected_node_names]
-    )
+    selected_nodes = [nodes[node_name] for node_name in selected_node_names]
 
     # Save links (only for selected nodes or all if no nodes are selected)
-    print("LINK serialization")
     for link in node_tree.links:
         if selected_node_names is None or (
             link.from_node.name in selected_node_names
@@ -353,7 +350,6 @@ def encode_data(material, selected_node_names=None):
                 }
             )
 
-    print("NODE serialization")
     # Serialize selected nodes
     for node in selected_nodes:
         node_dict = serialize_node(node)
@@ -431,14 +427,13 @@ class NodeRunnerExport(bpy.types.Operator):
     )  # type: ignore
 
     def execute(self, context):
-        self.report({"INFO"}, "Node Runner Export successful")
         return {"FINISHED"}
 
     def invoke(self, context, event):
         wm = context.window_manager
         material = bpy.context.object.active_material
         if not material or not hasattr(material, "node_tree"):
-            self.report({"ERROR"}, "No valid material with a node tree selected")
+            self.report({"INFO"}, "No valid material with a node tree selected")
             return {"CANCELLED"}
 
         selected_nodes = bpy.context.selected_nodes
@@ -457,7 +452,6 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
 
     def execute(self, context):
         bpy.ops.object.node_runner_import("INVOKE_DEFAULT")
-        self.report({"INFO"}, "Node Runner Import executed")
         return {"FINISHED"}
 
     def invoke(self, context, event):
@@ -470,8 +464,15 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
     bl_label = "Node Runner Export Context Menu"
 
     def execute(self, context):
-        bpy.ops.object.node_runner_export("INVOKE_DEFAULT")
-        self.report({"INFO"}, "Node Runner Export executed")
+
+        selected_nodes = bpy.context.selected_nodes
+        selected_node_names = (
+            [node.name for node in selected_nodes] if selected_nodes else None
+        )
+        if selected_node_names == None:
+            self.report({"WARNING"}, "No nodes selected!")
+        else:
+            bpy.ops.object.node_runner_export("INVOKE_DEFAULT")
         return {"FINISHED"}
 
     def invoke(self, context, event):
