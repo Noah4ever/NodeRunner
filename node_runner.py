@@ -3,7 +3,6 @@ import pickle
 import zlib
 import base64
 import mathutils
-import inspect
 
 
 def serialize_color(color):
@@ -112,15 +111,28 @@ def deserialize_texture_mapping(node, data):
 
 def deserialize_inputs(node, data):
     """Deserialize inputs"""
+    print("deserializing inputs of node name", node.name)
+    print("deserializing inputs of node", node)
     for i, input in enumerate(data):
-        if hasattr(node.inputs[i], "default_value"):
+        print("deserializing input", i, input)
+        if (
+            input is not None
+            and hasattr(node, "inputs")
+            and len(node.inputs) > 0
+            and hasattr(node.inputs[i], "default_value")
+        ):
             node.inputs[i].default_value = input
 
 
 def deserialize_outputs(node, data):
     """Deserialize outputs"""
     for i, output in enumerate(data):
-        if hasattr(node.outputs[i], "default_value"):
+        if (
+            output is not None
+            and hasattr(node, "outputs")
+            and len(node.outputs) > 0
+            and hasattr(node.outputs[i], "default_value")
+        ):
             node.outputs[i].default_value = output
 
 
@@ -191,6 +203,49 @@ def deserialize_image(node, data):
     node.image = image
 
 
+def serialize_node_tree(node_tree):
+    """Serialize node tree"""
+    data = {"nodes": {}, "links": []}
+
+    for node in node_tree.nodes:
+        node_dict = serialize_node(node)
+        data["nodes"][node.name] = node_dict
+
+    for link in node_tree.links:
+        data["links"].append(
+            {
+                "from_node": link.from_node.name,
+                "to_node": link.to_node.name,
+                "from_socket": link.from_socket.name,
+                "from_socket_type": link.from_socket.type,
+                "to_socket": link.to_socket.name,
+                "to_socket_type": link.to_socket.type,
+            }
+        )
+    data["group"] = node_tree.name
+    return data
+
+
+def deserialize_node_tree(node, data):
+    """Deserialize node tree"""
+    node_names = {}
+    node.node_tree = bpy.data.node_groups.new(data["group"], "ShaderNodeTree")
+    for node_name, node_data in data["nodes"].items():
+        node_names[node_name] = deserialize_node(node_data, node.node_tree.nodes)
+
+    # Have to create new input and output links / sockets for the node group
+    for link_data in data["links"]:
+        from_node = node_names[link_data["from_node"]]
+        output_socket = from_node.outputs.get(link_data["from_socket"])
+        if from_node.bl_idname == "NodeGroupInput":
+            output_socket = link_data["to_socket_type"]
+        to_node = node_names[link_data["to_node"]]
+        input_socket = to_node.inputs.get(link_data["to_socket"])
+        if to_node.bl_idname == "NodeGroupOutput":
+            input_socket = link_data["from_socket_type"]
+        node.node_tree.links.new(input_socket, output_socket)
+
+
 def serialize_attr(node, attr):
     data = attr
     if isinstance(data, mathutils.Color):  # Color
@@ -201,6 +256,10 @@ def serialize_attr(node, attr):
         data = serialize_euler(data)
     elif isinstance(data, bpy.types.ColorRamp):  # Color Ramp
         data = serialize_color_ramp(node)
+    elif isinstance(
+        data, bpy.types.ShaderNodeTree
+    ):  # !!! Node Tree <-- Not working yet !!!
+        data = serialize_node_tree(data)
     elif isinstance(data, bpy.types.ColorMapping):  # Color Mapping
         data = serialize_color_mapping(node)
     elif isinstance(data, bpy.types.TexMapping):  # Texture Mapping
@@ -312,14 +371,19 @@ def deserialize_node(node_data, nodes):
             deserialize_color_mapping(new_node, prop_value)
         elif prop_name == "texture_mapping":
             deserialize_texture_mapping(new_node, prop_value)
-        elif prop_name == "inputs":
-            deserialize_inputs(new_node, prop_value)
-        elif prop_name == "outputs":
-            deserialize_outputs(new_node, prop_value)
+        elif prop_name == "node_tree":
+            print("deserializing node tree")
+            deserialize_node_tree(new_node, prop_value)
         elif prop_name == "mapping":
             deserialize_curve_mapping(new_node, prop_value)
         elif prop_name == "image":
             deserialize_image(new_node, prop_value)
+        elif prop_name == "inputs":
+            print("deserializing inputs")
+            deserialize_inputs(new_node, prop_value)
+        elif prop_name == "outputs":
+            print("deserializing outputs")
+            deserialize_outputs(new_node, prop_value)
         else:
             setattr(new_node, prop_name, prop_value)
     return new_node
