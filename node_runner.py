@@ -217,12 +217,13 @@ def serialize_node_tree(node_tree):
                 "from_node": link.from_node.name,
                 "to_node": link.to_node.name,
                 "from_socket": link.from_socket.name,
-                "from_socket_type": link.from_socket.type,
+                "from_socket_type": link.from_socket.bl_idname,
                 "to_socket": link.to_socket.name,
-                "to_socket_type": link.to_socket.type,
+                "to_socket_type": link.to_socket.bl_idname,
             }
         )
     data["group"] = node_tree.name
+    print("\nSerialized node tree", data)
     return data
 
 
@@ -233,16 +234,34 @@ def deserialize_node_tree(node, data):
     for node_name, node_data in data["nodes"].items():
         node_names[node_name] = deserialize_node(node_data, node.node_tree.nodes)
 
+    print("Link data:", data["links"])
     # Have to create new input and output links / sockets for the node group
     for link_data in data["links"]:
         from_node = node_names[link_data["from_node"]]
         output_socket = from_node.outputs.get(link_data["from_socket"])
         if from_node.bl_idname == "NodeGroupInput":
-            output_socket = link_data["to_socket_type"]
+            # TODO: Should not create new socket if it already exists (multi outputs)
+            node.node_tree.interface.new_socket(
+                name=link_data["to_socket"],
+                description=link_data["to_socket"] + " Output",
+                in_out="INPUT",
+                socket_type=link_data["to_socket_type"],
+            )
+            output_socket = from_node.outputs.get(link_data["to_socket"])
+
         to_node = node_names[link_data["to_node"]]
         input_socket = to_node.inputs.get(link_data["to_socket"])
         if to_node.bl_idname == "NodeGroupOutput":
-            input_socket = link_data["from_socket_type"]
+
+            node.node_tree.interface.new_socket(
+                name=link_data["from_socket"],
+                description=link_data["from_socket"] + " Input",
+                in_out="OUTPUT",
+                socket_type=link_data["from_socket_type"],
+            )
+            # A "node_tree" outputs is a input socket on the node group output
+            input_socket = to_node.inputs.get(link_data["from_socket"])
+
         node.node_tree.links.new(input_socket, output_socket)
 
 
