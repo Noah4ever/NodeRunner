@@ -309,12 +309,15 @@ def serialize_node(node):
             continue
         node_dict[prop] = serialize_attr(node, attr)
     node_dict["type"] = node.bl_idname
+    node_dict["label"] = node.label
     return node_dict
 
 
 def deserialize_node(node_data, nodes):
     """Deserialize node properties and add new node"""
     new_node = nodes.new(type=node_data["type"])  # Create new node
+
+    new_node.label = node_data["label"]  # Set node label
 
     readonly_props = ["type", "image_user"]
     for prop_name, prop_value in node_data.items():
