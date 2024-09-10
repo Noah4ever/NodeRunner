@@ -23,10 +23,10 @@ def serialize_euler(euler):
 def serialize_color_ramp(node):
     """Serialize color ramp"""
     data = {
-        "color_mode": node.color_ramp.color_mode,  # default RGB
+        "color_mode": node.color_ramp.color_mode,
         "elements": [],
-        "hue_interpolation": node.color_ramp.hue_interpolation,  # default NEAR
-        "interpolation": node.color_ramp.interpolation,  # default LINEAR
+        "hue_interpolation": node.color_ramp.hue_interpolation,
+        "interpolation": node.color_ramp.interpolation,
     }
     for element in node.color_ramp.elements:
         data["elements"].append(
@@ -203,68 +203,6 @@ def deserialize_image(node, data):
     node.image = image
 
 
-def serialize_node_tree(node_tree):
-    """Serialize node tree"""
-    data = {"nodes": {}, "links": []}
-
-    for node in node_tree.nodes:
-        node_dict = serialize_node(node)
-        data["nodes"][node.name] = node_dict
-
-    for link in node_tree.links:
-        data["links"].append(
-            {
-                "from_node": link.from_node.name,
-                "to_node": link.to_node.name,
-                "from_socket": link.from_socket.name,
-                "from_socket_type": link.from_socket.bl_idname,
-                "to_socket": link.to_socket.name,
-                "to_socket_type": link.to_socket.bl_idname,
-            }
-        )
-    data["group"] = node_tree.name
-    print("\nSerialized node tree", data)
-    return data
-
-
-def deserialize_node_tree(node, data):
-    """Deserialize node tree"""
-    node_names = {}
-    node.node_tree = bpy.data.node_groups.new(data["group"], "ShaderNodeTree")
-    for node_name, node_data in data["nodes"].items():
-        node_names[node_name] = deserialize_node(node_data, node.node_tree.nodes)
-
-    print("Link data:", data["links"])
-    # Have to create new input and output links / sockets for the node group
-    for link_data in data["links"]:
-        from_node = node_names[link_data["from_node"]]
-        output_socket = from_node.outputs.get(link_data["from_socket"])
-        if from_node.bl_idname == "NodeGroupInput":
-            # TODO: Should not create new socket if it already exists (multi outputs)
-            node.node_tree.interface.new_socket(
-                name=link_data["to_socket"],
-                description=link_data["to_socket"] + " Output",
-                in_out="INPUT",
-                socket_type=link_data["to_socket_type"],
-            )
-            output_socket = from_node.outputs.get(link_data["to_socket"])
-
-        to_node = node_names[link_data["to_node"]]
-        input_socket = to_node.inputs.get(link_data["to_socket"])
-        if to_node.bl_idname == "NodeGroupOutput":
-
-            node.node_tree.interface.new_socket(
-                name=link_data["from_socket"],
-                description=link_data["from_socket"] + " Input",
-                in_out="OUTPUT",
-                socket_type=link_data["from_socket_type"],
-            )
-            # A "node_tree" outputs is a input socket on the node group output
-            input_socket = to_node.inputs.get(link_data["from_socket"])
-
-        node.node_tree.links.new(input_socket, output_socket)
-
-
 def serialize_attr(node, attr):
     data = attr
     if isinstance(data, mathutils.Color):  # Color
@@ -278,7 +216,7 @@ def serialize_attr(node, attr):
     elif isinstance(
         data, bpy.types.ShaderNodeTree
     ):  # !!! Node Tree <-- Not working yet !!!
-        data = serialize_node_tree(data)
+        data = serialize_node_tree(node.node_tree)
     elif isinstance(data, bpy.types.ColorMapping):  # Color Mapping
         data = serialize_color_mapping(node)
     elif isinstance(data, bpy.types.TexMapping):  # Texture Mapping
@@ -408,37 +346,148 @@ def deserialize_node(node_data, nodes):
     return new_node
 
 
-def encode_data(material, selected_node_names=None):
-    node_tree = material.node_tree
+def serialize_node_tree(node_tree, selected_node_names=None):
     nodes = node_tree.nodes
 
     # Initialize empty data structure for nodes and links
     data = {"nodes": {}, "links": []}
 
-    # Check if specific nodes are provided for export, otherwise use all nodes
-    selected_nodes = [nodes[node_name] for node_name in selected_node_names]
+    # Use selected nodes
+    # Use all nodes
+    if selected_node_names is None:
+        selected_nodes = list(node_tree.nodes)
+    else:
+        selected_nodes = [nodes[node_name] for node_name in selected_node_names]
 
-    # Save links (only for selected nodes or all if no nodes are selected)
-    for link in node_tree.links:
-        if selected_node_names is None or (
-            link.from_node.name in selected_node_names
-            and link.to_node.name in selected_node_names
-        ):
-            data["links"].append(
-                {
-                    "from_node": link.from_node.name,
-                    "to_node": link.to_node.name,
-                    "from_socket": link.from_socket.name,
-                    "to_socket": link.to_socket.name,
-                }
-            )
+    print("SELECTED NIDE", selected_nodes)
 
     # Serialize selected nodes
     for node in selected_nodes:
         node_dict = serialize_node(node)
         data["nodes"][node.name] = node_dict
 
-    # Encode data (links and nodes)
+    # Save links (only for selected nodes)
+    for link in node_tree.links:
+        if link.from_node in selected_nodes and link.to_node in selected_nodes:
+            data["links"].append(
+                {
+                    "from_node": link.from_node.name,
+                    "to_node": link.to_node.name,
+                    "from_socket": link.from_socket.name,
+                    "from_socket_type": link.from_socket.bl_idname,
+                    "from_socket_identifier": link.from_socket.identifier,
+                    "to_socket": link.to_socket.name,
+                    "to_socket_type": link.to_socket.bl_idname,
+                    "to_socket_identifier": link.to_socket.identifier,
+                }
+            )
+    data["name"] = node_tree.name
+    print("\n\nData:", data)
+    return data
+
+
+def getNodeSocketBaseType(type):
+    usable_type_array = [
+        "NodeSocketBool",
+        "NodeSocketVector",
+        "NodeSocketInt",
+        "NodeSocketShader",
+        "NodeSocketFloat",
+        "NodeSocketColor",
+    ]
+    for usable_type in usable_type_array:
+        if usable_type in type:
+            return usable_type
+    return usable_type_array[0]
+
+
+def get_socket_by_identifier(node, identifier, socket_type="INPUT"):
+    # Select input or output sockets
+    sockets = node.inputs if socket_type.upper() == "INPUT" else node.outputs
+
+    # Find the socket by identifier
+    for socket in sockets:
+        if socket.identifier == identifier:
+            return socket
+    return None
+
+
+def create_socket(node_tree, socket_name, description, in_out, socket_type):
+    return node_tree.interface.new_socket(
+        name=socket_name,
+        description=description,
+        in_out=in_out,
+        socket_type=socket_type,
+    )
+
+
+def deserialize_link(node, node_names, link_data):
+    # === From node ===
+    from_node = node_names[link_data["from_node"]]
+    output_socket = get_socket_by_identifier(
+        from_node, link_data["from_socket_identifier"], "OUTPUT"
+    )
+
+    if from_node.bl_idname == "NodeGroupInput":
+        # Create new input socket on the ShaderNodeGroup
+        if output_socket is None:
+            output_interface_socket: bpy.types.NodeTreeInterfaceSocket = create_socket(
+                node.node_tree,
+                link_data["from_socket"],
+                link_data["from_socket"] + " Input",
+                "INPUT",
+                getNodeSocketBaseType(link_data["to_socket_type"]),
+            )
+            output_socket = get_socket_by_identifier(
+                from_node, output_interface_socket.identifier, "OUTPUT"
+            )
+
+    # === To node ===
+    to_node = node_names[link_data["to_node"]]
+    input_socket = get_socket_by_identifier(
+        to_node, link_data["to_socket_identifier"], "INPUT"
+    )
+    if to_node.bl_idname == "NodeGroupOutput":
+        # Create new output socket on the ShaderNodeGroup
+        if input_socket is None:
+            input_interface_socket: bpy.types.NodeTreeInterfaceSocket = create_socket(
+                node.node_tree,
+                link_data["to_socket"],
+                link_data["to_socket"] + " Output",
+                "OUTPUT",
+                getNodeSocketBaseType(link_data["from_socket_type"]),
+            )
+            input_socket = get_socket_by_identifier(
+                to_node, input_interface_socket.identifier, "INPUT"
+            )
+
+    print("Creating link from output:", output_socket, "to input:", input_socket)
+    return output_socket, input_socket
+
+
+def deserialize_node_tree(node, data):
+    node_names = {}
+
+    if isinstance(node, bpy.types.ShaderNodeGroup):
+        node.node_tree = bpy.data.node_groups.new(data["name"], "ShaderNodeTree")
+
+    # Save the new node with the node name which is used for linking to get the node
+    for node_name, node_data in data["nodes"].items():
+        node_names[node_name] = deserialize_node(node_data, node.node_tree.nodes)
+
+    # Apply links
+    for link_data in data["links"]:
+        # Deserialize link
+        input_socket, output_socket = deserialize_link(node, node_names, link_data)
+        # Create new link
+        node.node_tree.links.new(input_socket, output_socket)
+
+
+def encode_data(node_tree, selected_node_names=None):
+    # Serialize node tree
+    data = serialize_node_tree(node_tree, selected_node_names)
+
+    # Compress and encode data
     compress_data = zlib.compress(pickle.dumps(data), 9)
     base64_encoded = base64.b64encode(compress_data).decode("utf-8")
 
@@ -448,33 +497,17 @@ def encode_data(material, selected_node_names=None):
 
 
 def decode_data(base64_encoded, material):
+    # Create new material if none is selected
     if not material or not hasattr(material, "node_tree"):
         material = bpy.data.materials.new(name="Material")
         if bpy.context.active_object:
             bpy.context.active_object.data.materials.append(material)
-    print(material)
-    print(material.node_tree)
-    # ERROR node tree is None when no material is assigned
-    node_tree = material.node_tree
-    nodes = node_tree.nodes
 
+    # Decode base64 encoded data
     deserialized_data = pickle.loads(zlib.decompress(base64.b64decode(base64_encoded)))
 
-    node_names = {}
-
-    # Save new node with name for linking
-    for node_name, node_data in deserialized_data["nodes"].items():
-        node_names[node_name] = deserialize_node(
-            node_data, nodes
-        )  # Decode node and return new node
-
-    # Apply links
-    for link_data in deserialized_data["links"]:
-        from_node = node_names[link_data["from_node"]]
-        output_socket = from_node.outputs.get(link_data["from_socket"])
-        to_node = node_names[link_data["to_node"]]
-        input_socket = to_node.inputs.get(link_data["to_socket"])
-        node_tree.links.new(input_socket, output_socket)
+    # Deserialize node tree
+    deserialize_node_tree(material, deserialized_data)
 
 
 class NodeRunnerImport(bpy.types.Operator):
@@ -524,7 +557,7 @@ class NodeRunnerExport(bpy.types.Operator):
             [node.name for node in selected_nodes] if selected_nodes else None
         )
         self.my_node_runner_string = encode_data(
-            material, selected_node_names=selected_node_names
+            material.node_tree, selected_node_names=selected_node_names
         )
         return wm.invoke_props_dialog(self)
 
