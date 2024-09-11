@@ -111,10 +111,13 @@ def deserialize_texture_mapping(node, data):
 
 def deserialize_inputs(node, data):
     """Deserialize inputs"""
-    print("deserializing inputs of node name", node.name)
-    print("deserializing inputs of node", node)
+
+    if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
+        node, bpy.types.NodeGroupOutput
+    ):
+        return
+
     for i, input in enumerate(data):
-        print("deserializing input", i, input)
         if (
             input is not None
             and hasattr(node, "inputs")
@@ -126,6 +129,12 @@ def deserialize_inputs(node, data):
 
 def deserialize_outputs(node, data):
     """Deserialize outputs"""
+
+    if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
+        node, bpy.types.NodeGroupOutput
+    ):
+        return
+
     for i, output in enumerate(data):
         if (
             output is not None
@@ -213,9 +222,7 @@ def serialize_attr(node, attr):
         data = serialize_euler(data)
     elif isinstance(data, bpy.types.ColorRamp):  # Color Ramp
         data = serialize_color_ramp(node)
-    elif isinstance(
-        data, bpy.types.ShaderNodeTree
-    ):  # !!! Node Tree <-- Not working yet !!!
+    elif isinstance(data, bpy.types.ShaderNodeTree):
         data = serialize_node_tree(node.node_tree)
     elif isinstance(data, bpy.types.ColorMapping):  # Color Mapping
         data = serialize_color_mapping(node)
@@ -251,7 +258,7 @@ def serialize_attr(node, attr):
         pickle.dumps(data)  # Try to pickle dump to get error message
     except:
         print(
-            "Serializing error on:",
+            "[ERROR] Serializing error on:",
             node.name,
             "with data:",
             data,
@@ -315,11 +322,14 @@ def serialize_node(node):
 
 def deserialize_node(node_data, nodes):
     """Deserialize node properties and add new node"""
-    new_node = nodes.new(type=node_data["type"])  # Create new node
 
+    new_node = nodes.new(type=node_data["type"])  # Create new node
     new_node.label = node_data["label"]  # Set node label
 
-    readonly_props = ["type", "image_user"]
+    if "node_tree" in node_data:
+        deserialize_node_tree(new_node, node_data["node_tree"])
+
+    readonly_props = ["type", "image_user", "node_tree"]
     for prop_name, prop_value in node_data.items():
         if prop_name in readonly_props:
             continue
@@ -331,18 +341,13 @@ def deserialize_node(node_data, nodes):
             deserialize_color_mapping(new_node, prop_value)
         elif prop_name == "texture_mapping":
             deserialize_texture_mapping(new_node, prop_value)
-        elif prop_name == "node_tree":
-            print("deserializing node tree")
-            deserialize_node_tree(new_node, prop_value)
         elif prop_name == "mapping":
             deserialize_curve_mapping(new_node, prop_value)
         elif prop_name == "image":
             deserialize_image(new_node, prop_value)
         elif prop_name == "inputs":
-            print("deserializing inputs")
             deserialize_inputs(new_node, prop_value)
         elif prop_name == "outputs":
-            print("deserializing outputs")
             deserialize_outputs(new_node, prop_value)
         else:
             setattr(new_node, prop_name, prop_value)
@@ -361,8 +366,6 @@ def serialize_node_tree(node_tree, selected_node_names=None):
         selected_nodes = list(node_tree.nodes)
     else:
         selected_nodes = [nodes[node_name] for node_name in selected_node_names]
-
-    print("SELECTED NIDE", selected_nodes)
 
     # Serialize selected nodes
     for node in selected_nodes:
@@ -389,7 +392,7 @@ def serialize_node_tree(node_tree, selected_node_names=None):
     return data
 
 
-def getNodeSocketBaseType(type):
+def get_node_socket_base_type(type):
     usable_type_array = [
         "NodeSocketBool",
         "NodeSocketVector",
@@ -439,7 +442,7 @@ def deserialize_link(node, node_names, link_data):
                 link_data["from_socket"],
                 link_data["from_socket"] + " Input",
                 "INPUT",
-                getNodeSocketBaseType(link_data["to_socket_type"]),
+                get_node_socket_base_type(link_data["to_socket_type"]),
             )
             output_socket = get_socket_by_identifier(
                 from_node, output_interface_socket.identifier, "OUTPUT"
@@ -458,13 +461,12 @@ def deserialize_link(node, node_names, link_data):
                 link_data["to_socket"],
                 link_data["to_socket"] + " Output",
                 "OUTPUT",
-                getNodeSocketBaseType(link_data["from_socket_type"]),
+                get_node_socket_base_type(link_data["from_socket_type"]),
             )
             input_socket = get_socket_by_identifier(
                 to_node, input_interface_socket.identifier, "INPUT"
             )
 
-    print("Creating link from output:", output_socket, "to input:", input_socket)
     return output_socket, input_socket
 
 
