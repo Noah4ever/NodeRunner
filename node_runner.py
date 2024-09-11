@@ -6,7 +6,10 @@ import mathutils
 
 
 def serialize_color(color):
-    """Serialize color"""
+    """
+    Serialize color
+
+    """
     return list(color)
 
 
@@ -112,6 +115,7 @@ def deserialize_texture_mapping(node, data):
 def deserialize_inputs(node, data):
     """Deserialize inputs"""
 
+    # Inputs of NodeGroupInput and NodeGroupOutput cannot be set on the node but need to be set on the group instead
     if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
         node, bpy.types.NodeGroupOutput
     ):
@@ -130,6 +134,7 @@ def deserialize_inputs(node, data):
 def deserialize_outputs(node, data):
     """Deserialize outputs"""
 
+    # Output of NodeGroupInput and NodeGroupOutput cannot be set on the node but need to be set on the group instead
     if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
         node, bpy.types.NodeGroupOutput
     ):
@@ -146,6 +151,7 @@ def deserialize_outputs(node, data):
 
 
 def serialize_curve_mapping(node):
+    """Serialize curve mapping"""
     data = {
         "black_level": serialize_attr(node, node.mapping.black_level),
         "clip_max_x": node.mapping.clip_max_x,
@@ -162,6 +168,7 @@ def serialize_curve_mapping(node):
 
 
 def deserialize_curve_mapping(node, data):
+    """Deserialize curve mapping"""
     node.mapping.black_level = data.get("black_level", (0.0, 0.0, 0.0))
     node.mapping.clip_max_x = data.get("clip_max_x", 0)
     node.mapping.clip_max_y = data.get("clip_max_y", 0)
@@ -180,6 +187,7 @@ def deserialize_curve_mapping(node, data):
 
 
 def serialize_curve_map(node, curve_map: bpy.types.CurveMap):
+    """Serialize curve map"""
     data = {
         "points": serialize_attr(node, curve_map.points),
     }
@@ -187,6 +195,7 @@ def serialize_curve_map(node, curve_map: bpy.types.CurveMap):
 
 
 def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
+    """Serialize curve map point"""
     data = {
         "handle_type": curve_map_point.handle_type,
         "location": serialize_attr(node, curve_map_point.location),
@@ -196,6 +205,7 @@ def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
 
 
 def serialize_image(node, image: bpy.types.Image):
+    """Serialize image"""
     data = {
         "name": image.name,
     }
@@ -203,6 +213,7 @@ def serialize_image(node, image: bpy.types.Image):
 
 
 def deserialize_image(node, data):
+    """Deserialize image"""
     image = next(
         (obj for obj in bpy.context.blend_data.images if obj.name == data.get("name")),
         None,
@@ -213,6 +224,7 @@ def deserialize_image(node, data):
 
 
 def serialize_attr(node, attr):
+    """Serialize attribute"""
     data = attr
     if isinstance(data, mathutils.Color):  # Color
         data = serialize_color(data)
@@ -326,10 +338,12 @@ def deserialize_node(node_data, nodes):
     new_node = nodes.new(type=node_data["type"])  # Create new node
     new_node.label = node_data["label"]  # Set node label
 
+    # Node tree has to be done before other properties like inputs and outputs
     if "node_tree" in node_data:
         deserialize_node_tree(new_node, node_data["node_tree"])
+        node_data.pop("node_tree")
 
-    readonly_props = ["type", "image_user", "node_tree"]
+    readonly_props = ["type", "image_user"]
     for prop_name, prop_value in node_data.items():
         if prop_name in readonly_props:
             continue
@@ -355,13 +369,12 @@ def deserialize_node(node_data, nodes):
 
 
 def serialize_node_tree(node_tree, selected_node_names=None):
+    """Serialize node tree"""
     nodes = node_tree.nodes
 
     # Initialize empty data structure for nodes and links
     data = {"nodes": {}, "links": []}
 
-    # Use selected nodes
-    # Use all nodes
     if selected_node_names is None:
         selected_nodes = list(node_tree.nodes)
     else:
@@ -393,6 +406,18 @@ def serialize_node_tree(node_tree, selected_node_names=None):
 
 
 def get_node_socket_base_type(type):
+    """
+    Get base type of node socket.
+
+    This is used to create new sockets on the ShaderNodeGroup.
+    Only base types can be used for creating a new socket on the ShaderNodeGroup.
+
+    Parameters:
+    type (str): Type of node socket
+
+    Returns:
+    str: Base type of node socket
+    """
     usable_type_array = [
         "NodeSocketBool",
         "NodeSocketVector",
@@ -408,6 +433,7 @@ def get_node_socket_base_type(type):
 
 
 def get_socket_by_identifier(node, identifier, socket_type="INPUT"):
+    """Get socket by identifier"""
     # Select input or output sockets
     sockets = node.inputs if socket_type.upper() == "INPUT" else node.outputs
 
@@ -419,6 +445,7 @@ def get_socket_by_identifier(node, identifier, socket_type="INPUT"):
 
 
 def create_socket(node_tree, socket_name, description, in_out, socket_type):
+    """Create new socket for NodeGroupInput and NodeGroupOutput"""
     return node_tree.interface.new_socket(
         name=socket_name,
         description=description,
@@ -428,6 +455,7 @@ def create_socket(node_tree, socket_name, description, in_out, socket_type):
 
 
 def deserialize_link(node, node_names, link_data):
+    """Deserialize link"""
     # === From node ===
     from_node = node_names[link_data["from_node"]]
     output_socket = get_socket_by_identifier(
@@ -471,6 +499,7 @@ def deserialize_link(node, node_names, link_data):
 
 
 def deserialize_node_tree(node, data):
+    """Deserialize node tree"""
     node_names = {}
 
     if isinstance(node, bpy.types.ShaderNodeGroup):
@@ -489,6 +518,7 @@ def deserialize_node_tree(node, data):
 
 
 def encode_data(node_tree, selected_node_names=None):
+    """Encode data"""
     # Serialize node tree
     data = serialize_node_tree(node_tree, selected_node_names)
 
@@ -502,6 +532,7 @@ def encode_data(node_tree, selected_node_names=None):
 
 
 def decode_data(base64_encoded, material):
+    """Decode data"""
     # Create new material if none is selected
     if not material or not hasattr(material, "node_tree"):
         material = bpy.data.materials.new(name="Material")
