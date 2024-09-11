@@ -1,6 +1,7 @@
 # NodeRunner
 
 #### Example of exporting and importing shader nodes
+
 https://github.com/user-attachments/assets/58fe2ed8-74bb-485b-aa89-6c8f0a16d7e0
 
 ## Overview
@@ -15,11 +16,19 @@ With this addon, sharing and reusing shader node setups becomes as simple as cop
 - **🔄 Import Shader Nodes**: Paste a shared shader node string to recreate the exact node setup in your own Blender project.
 - **💬 Text-Based Sharing**: Exported node strings are lightweight and can be shared via messengers, social media, or even in YouTube comments.
 
-## Development 
+## Development
 
 1. Download and open the `.blend` file that includes the addon script.
 2. In Blender, run the script once using the **Text Editor** or execute it from the **Scripting** tab.
 3. Once the script is executed, you’re ready to use the Node Runner features!
+
+### Documentation
+
+To create documentation run the following command:
+
+```bash
+doxygen Doxyfile
+```
 
 ## Example
 
