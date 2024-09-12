@@ -9,9 +9,12 @@ def serialize_color(color):
     """!
     Serialize color
 
-    @param color: Color to serialize
+    Args:
+      color: Color to serialize
 
-    @return Serialized color as list
+    Returns:
+      Serialized color as list
+
     """
     return list(color)
 
@@ -20,9 +23,12 @@ def serialize_vector(vector):
     """!
     Serialize vector
 
-    @param vector: Vector to serialize
+    Args:
+      vector: Vector to serialize
 
-    @return Serialized vector as list
+    Returns:
+      Serialized vector as list
+
     """
     return list(vector)
 
@@ -31,9 +37,12 @@ def serialize_euler(euler):
     """!
     Serialize euler
 
-    @param euler: Euler to serialize
+    Args:
+      euler: Euler to serialize
 
-    @return Serialized euler as list
+    Returns:
+      Serialized euler as list
+
     """
     return list(euler)
 
@@ -42,9 +51,12 @@ def serialize_color_ramp(node):
     """!
     Serialize color ramp
 
-    @param node: Node to serialize
+    Args:
+      node: Node to serialize
 
-    @return Serialized color ramp data
+    Returns:
+      Serialized color ramp data
+
     """
     data = {
         "color_mode": node.color_ramp.color_mode,
@@ -63,8 +75,12 @@ def deserialize_color_ramp(node, data):
     """!
     Deserialize color ramp
 
-    @param node: Node to set color ramp data
-    @param data: Data to deserialize
+    Args:
+      node: Node to set color ramp data
+      data: Data to deserialize
+
+    Returns:
+
     """
     node.color_ramp.color_mode = data.get("color_mode", 0)
     node.color_ramp.hue_interpolation = data.get("hue_interpolation", 1)
@@ -80,9 +96,12 @@ def serialize_color_mapping(node):
     """!
     Serialize color mapping
 
-    @param node: Node to serialize
+    Args:
+      node: Node to serialize
 
-    @return Serialized color mapping data
+    Returns:
+      Serialized color mapping data
+
     """
     data = {
         "blend_color": serialize_color(node.color_mapping.blend_color),
@@ -101,8 +120,12 @@ def deserialize_color_mapping(node, data):
     """!
     Deserialize color mapping
 
-    @param node: Node to set color mapping data
-    @param data: Data to deserialize
+    Args:
+      node: Node to set color mapping data
+      data: Data to deserialize
+
+    Returns:
+
     """
     node.color_mapping.blend_color = data.get("blend_color", (0.0, 0.0, 0.0))
     node.color_mapping.blend_factor = data.get("blend_factor", 0.0)
@@ -118,9 +141,12 @@ def serialize_texture_mapping(node):
     """!
     Serialize texture mapping
 
-    @param node: Node to serialize
+    Args:
+      node: Node to serialize
 
-    @return Serialized texture mapping data
+    Returns:
+      Serialized texture mapping data
+
     """
     data = {
         "mapping": node.texture_mapping.mapping,
@@ -143,8 +169,12 @@ def deserialize_texture_mapping(node, data):
     """!
     Deserialize texture mapping
 
-    @param node: Node to set texture mapping data
-    @param data: Data to deserialize
+    Args:
+      node: Node to set texture mapping data
+      data: Data to deserialize
+
+    Returns:
+
     """
     node.texture_mapping.mapping = data.get("mapping", 0)
     node.texture_mapping.mapping_x = data.get("mapping_x", 0)
@@ -163,11 +193,15 @@ def deserialize_texture_mapping(node, data):
 def deserialize_inputs(node, data):
     """!
     Deserialize inputs
-
+    
     Check if the node has inputs and set the input values.
 
-    @param node: Node to set inputs
-    @param data: Data to deserialize
+    Args:
+      node: Node to set inputs
+      data: Data to deserialize
+
+    Returns:
+
     """
 
     # Inputs of NodeGroupInput and NodeGroupOutput cannot be set on the node but need to be set on the group instead
@@ -189,11 +223,15 @@ def deserialize_inputs(node, data):
 def deserialize_outputs(node, data):
     """!
     Deserialize outputs
-
+    
     Check if the node has outputs and set the output values.
 
-    @param node: Node to set outputs
-    @param data: Data to deserialize
+    Args:
+      node: Node to set outputs
+      data: Data to deserialize
+
+    Returns:
+
     """
 
     # Output of NodeGroupInput and NodeGroupOutput cannot be set on the node but need to be set on the group instead
@@ -216,9 +254,12 @@ def serialize_curve_mapping(node):
     """!
     Serialize curve mapping
 
-    @param node: Node to serialize
+    Args:
+      node: Node to serialize
 
-    @return Serialized curve mapping data
+    Returns:
+      Serialized curve mapping data
+
     """
 
     data = {
@@ -240,8 +281,12 @@ def deserialize_curve_mapping(node, data):
     """!
     Deserialize curve mapping
 
-    @param node: Node to set curve mapping data
-    @param data: Data to deserialize
+    Args:
+      node: Node to set curve mapping data
+      data: Data to deserialize
+
+    Returns:
+
     """
     node.mapping.black_level = data.get("black_level", (0.0, 0.0, 0.0))
     node.mapping.clip_max_x = data.get("clip_max_x", 0)
@@ -264,10 +309,14 @@ def serialize_curve_map(node, curve_map: bpy.types.CurveMap):
     """!
     Serialize curve map
 
-    @param node: Node to serialize
-    @param curve_map: Curve map to serialize
+    Args:
+      node: Node to serialize
+      curve_map: Curve map to serialize
+      curve_map: bpy.types.CurveMap: 
 
-    @return Serialized curve map data
+    Returns:
+      Serialized curve map data
+
     """
     data = {
         "points": serialize_attr(node, curve_map.points),
@@ -279,10 +328,14 @@ def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
     """!
     Serialize curve map point
 
-    @param node: Node to serialize
-    @param curve_map_point: Curve map point to serialize
+    Args:
+      node: Node to serialize
+      curve_map_point: Curve map point to serialize
+      curve_map_point: bpy.types.CurveMapPoint: 
 
-    @return Serialized curve map point data
+    Returns:
+      Serialized curve map point data
+
     """
     data = {
         "handle_type": curve_map_point.handle_type,
@@ -293,13 +346,16 @@ def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
 
 
 def serialize_image(node, image: bpy.types.Image):
-    """!
-    Serialize image
+    """Serialize image.
 
-    @param node: Node to serialize
-    @param image: Image to serialize
+    Args:
+      node: Node to serialize.
+      image(bpy.types.Image): Image to serialize.
+      image: bpy.types.Image: 
 
-    @return Serialized image data
+    Returns:
+      dict: Serialized image data.
+
     """
     data = {
         "name": image.name,
@@ -311,8 +367,12 @@ def deserialize_image(node, data):
     """!
     Deserialize image
 
-    @param node: Node to set image data
-    @param data: Data to deserialize
+    Args:
+      node: Node to set image data
+      data: Data to deserialize
+
+    Returns:
+
     """
     image = next(
         (obj for obj in bpy.context.blend_data.images if obj.name == data.get("name")),
@@ -326,15 +386,18 @@ def deserialize_image(node, data):
 def serialize_attr(node, attr):
     """!
     Serialize attribute of a node
-
+    
     Check the type of the attribute and serialize it accordingly.
     If the attribute is a complex type, call the corresponding serialization function.
     Prints an error message if the serialization fails.
 
-    @param node: Node to serialize
-    @param attr: Attribute to serialize
+    Args:
+      node: Node to serialize
+      attr: Attribute to serialize
 
-    @return Serialized attribute data
+    Returns:
+      Serialized attribute data
+
     """
     data = attr
     if isinstance(data, mathutils.Color):  # Color
@@ -394,12 +457,15 @@ def serialize_attr(node, attr):
 def serialize_node(node):
     """!
     Serialize node properties
-
+    
     Loop through all properties of the node and serialize them and add them to a dictionary.
 
-    @param node: Node to serialize
+    Args:
+      node: Node to serialize
 
-    @return Serialized node dictionary
+    Returns:
+      Serialized node dictionary
+
     """
     exclude_props = [
         "__doc__",
@@ -454,13 +520,16 @@ def serialize_node(node):
 def deserialize_node(node_data, nodes):
     """!
     Deserialize node
-
+    
     Loop through all properties of the node data and deserialize them accordingly.
 
-    @param node_data: Node data to deserialize
-    @param nodes: Nodes to add the new node to
+    Args:
+      node_data: Node data to deserialize
+      nodes: Nodes to add the new node to
 
-    @return New node
+    Returns:
+      New node
+
     """
 
     new_node = nodes.new(type=node_data["type"])  # Create new node
@@ -499,13 +568,16 @@ def deserialize_node(node_data, nodes):
 def serialize_node_tree(node_tree, selected_node_names=None):
     """!
     Serialize node tree
-
+    
     Loop through all nodes and links of the node tree and serialize them.
 
-    @param node_tree: Node tree to serialize
-    @param selected_node_names: Selected node names
+    Args:
+      node_tree: Node tree to serialize
+      selected_node_names: Selected node names (Default value = None)
 
-    @return Serialized node tree data
+    Returns:
+      Serialized node tree data
+
     """
     nodes = node_tree.nodes
 
@@ -542,17 +614,17 @@ def serialize_node_tree(node_tree, selected_node_names=None):
 
 
 def get_node_socket_base_type(type):
-    """
-    Get base type of node socket.
-
+    """Get base type of node socket.
+    
     This is used to create new sockets on the ShaderNodeGroup.
     Only base types can be used for creating a new socket on the ShaderNodeGroup.
 
-    Parameters:
-    type (str): Type of node socket
+    Args:
+      type: str
 
     Returns:
-    str: Base type of node socket
+      str: Base type of node socket
+
     """
     usable_type_array = [
         "NodeSocketBool",
@@ -571,13 +643,17 @@ def get_node_socket_base_type(type):
 def get_socket_by_identifier(node, identifier, socket_type="INPUT"):
     """!
     Get socket by identifier
-
+    
     Loops through the input or output sockets of a node and returns the socket with the given identifier.
 
-    @param node: Node to get the socket from
-    @param identifier: Identifier of the socket
+    Args:
+      node: Node to get the socket from
+      identifier: Identifier of the socket
+      socket_type:  (Default value = "INPUT")
 
-    @return Socket with the given identifier
+    Returns:
+      Socket with the given identifier
+
     """
     # Select input or output sockets
     sockets = node.inputs if socket_type.upper() == "INPUT" else node.outputs
@@ -593,13 +669,16 @@ def create_socket(node_tree, socket_name, description, in_out, socket_type):
     """!
     Create new socket on the ShaderNodeGroup
 
-    @param node_tree: Node tree to create the socket on
-    @param socket_name: Name of the socket
-    @param description: Description of the socket
-    @param in_out: "INPUT" or "OUTPUT"
-    @param socket_type: Type of the socket
+    Args:
+      node_tree: Node tree to create the socket on
+      socket_name: Name of the socket
+      description: Description of the socket
+      in_out: INPUT" or "OUTPUT"
+      socket_type: Type of the socket
 
-    @return New socket
+    Returns:
+      New socket
+
     """
     return node_tree.interface.new_socket(
         name=socket_name,
@@ -612,15 +691,18 @@ def create_socket(node_tree, socket_name, description, in_out, socket_type):
 def deserialize_link(node, node_names, link_data):
     """!
     Deserialize link
-
+    
     Deserialize the link data and create a new link.
     If the link is connected to a NodeGroupInput or NodeGroupOutput, create a new input or output socket on the ShaderNodeGroup.
 
-    @param node: Node to deserialize the link on
-    @param node_names: Dictionary with node names
-    @param link_data: Link data to deserialize
+    Args:
+      node: Node to deserialize the link on
+      node_names: Dictionary with node names
+      link_data: Link data to deserialize
 
-    @return Output and input socket of the link
+    Returns:
+      Output and input socket of the link
+
     """
     # === From node ===
     from_node = node_names[link_data["from_node"]]
@@ -667,11 +749,15 @@ def deserialize_link(node, node_names, link_data):
 def deserialize_node_tree(node, data):
     """!
     Deserialize node tree
-
+    
     Deserialize the node tree data and create new nodes and links.
 
-    @param node: Node to deserialize the node tree on
-    @param data: Data to deserialize
+    Args:
+      node: Node to deserialize the node tree on
+      data: Data to deserialize
+
+    Returns:
+
     """
     node_names = {}
 
@@ -693,13 +779,16 @@ def deserialize_node_tree(node, data):
 def encode_data(node_tree, selected_node_names=None):
     """!
     Encode data
-
+    
     Serialize the node tree and compress and encode the data with zlib and base64.
 
-    @param node_tree: Node tree to encode
-    @param selected_node_names: Selected node names
+    Args:
+      node_tree: Node tree to encode
+      selected_node_names: Selected node names (Default value = None)
 
-    @return Base64 encoded data
+    Returns:
+      Base64 encoded data
+
     """
     # Serialize node tree
     data = serialize_node_tree(node_tree, selected_node_names)
@@ -716,11 +805,15 @@ def encode_data(node_tree, selected_node_names=None):
 def decode_data(base64_encoded, material):
     """!
     Decode data
-
+    
     Decode and decompress the base64 encoded data and deserialize the data.
 
-    @param base64_encoded: Base64 encoded data
-    @param material: Material to set the node tree on
+    Args:
+      base64_encoded: Base64 encoded data
+      material: Material to set the node tree on
+
+    Returns:
+
     """
 
     # Create new material if none is selected
@@ -737,6 +830,7 @@ def decode_data(base64_encoded, material):
 
 
 class NodeRunnerImport(bpy.types.Operator):
+    """ """
     bl_idname = "object.node_runner_import"
     bl_label = "Node Runner Import"
     bl_options = {"REGISTER", "UNDO"}
@@ -748,16 +842,34 @@ class NodeRunnerImport(bpy.types.Operator):
     )  # type: ignore
 
     def execute(self, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """
         decode_data(self.my_node_runner_string, bpy.context.material)
         self.report({"INFO"}, "Node Runner Import Main executed")
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        """
+
+        Args:
+          context: 
+          event: 
+
+        Returns:
+
+        """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
 
 class NodeRunnerExport(bpy.types.Operator):
+    """ """
     bl_idname = "object.node_runner_export"
     bl_label = "Node Runner Export"
     bl_options = {"REGISTER", "UNDO"}
@@ -769,9 +881,26 @@ class NodeRunnerExport(bpy.types.Operator):
     )  # type: ignore
 
     def execute(self, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        """
+
+        Args:
+          context: 
+          event: 
+
+        Returns:
+
+        """
         wm = context.window_manager
         material = bpy.context.object.active_material
         if not material or not hasattr(material, "node_tree"):
@@ -789,23 +918,50 @@ class NodeRunnerExport(bpy.types.Operator):
 
 
 class NodeRunnerImportContextMenu(bpy.types.Operator):
+    """ """
     bl_idname = "object.node_runner_import_context_menu"
     bl_label = "Node Runner Import Context Menu"
 
     def execute(self, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """
         bpy.ops.object.node_runner_import("INVOKE_DEFAULT")
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        """
+
+        Args:
+          context: 
+          event: 
+
+        Returns:
+
+        """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
 
 class NodeRunnerExportContextMenu(bpy.types.Operator):
+    """ """
     bl_idname = "object.node_runner_export_context_menu"
     bl_label = "Node Runner Export Context Menu"
 
     def execute(self, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """
 
         selected_nodes = bpy.context.selected_nodes
         selected_node_names = (
@@ -818,23 +974,49 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        """
+
+        Args:
+          context: 
+          event: 
+
+        Returns:
+
+        """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
 
 def menu_func_node_runner_export(self, context):
+    """
+
+    Args:
+      context: 
+
+    Returns:
+
+    """
     self.layout.operator(
         NodeRunnerExportContextMenu.bl_idname, text="Node Runner Export"
     )
 
 
 def menu_func_node_runner_import(self, context):
+    """
+
+    Args:
+      context: 
+
+    Returns:
+
+    """
     self.layout.operator(
         NodeRunnerImportContextMenu.bl_idname, text="Node Runner Import"
     )
 
 
 def register():
+    """ """
     bpy.utils.register_class(NodeRunnerImportContextMenu)
     bpy.utils.register_class(NodeRunnerExportContextMenu)
     bpy.utils.register_class(NodeRunnerImport)
@@ -846,6 +1028,7 @@ def register():
 
 
 def unregister():
+    """ """
     bpy.types.NODE_MT_context_menu.remove(menu_func_node_runner_export)
     bpy.types.NODE_MT_context_menu.remove(menu_func_node_runner_import)
 
@@ -861,4 +1044,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Unregister failed: {e}")
     register()
-            

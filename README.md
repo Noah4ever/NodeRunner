@@ -24,16 +24,16 @@ With this addon, sharing and reusing shader node setups becomes as simple as cop
 
 ### Documentation
 
-To create documentation run the following command:
+To create documentation you need to have installed:
 
 ```bash
-doxygen Doxyfile
+pip install mkdocs mkdocstrings-python mkdocstrings mkdocs-material
 ```
 
-On windows:
+After that you can run the following command:
 
 ```bash
-& 'C:\Program Files\doxygen\bin\doxygen.exe' Doxyfile
+mkdocs serve
 ```
 
 ## Example
