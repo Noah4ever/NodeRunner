@@ -30,6 +30,12 @@ To create documentation run the following command:
 doxygen Doxyfile
 ```
 
+On windows:
+
+```bash
+& 'C:\Program Files\doxygen\bin\doxygen.exe' Doxyfile
+```
+
 ## Example
 
 - **Export**: Right-click in the shader editor > **Node Runner Export** > Copy the generated string.
