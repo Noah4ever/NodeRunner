@@ -351,9 +351,10 @@ def serialize_attr(node, attr):
         bpy.types.CurveMapPoint: lambda d: serialize_curve_map_point(node, d),
         bpy.types.Image: serialize_image,
         bpy.types.ImageUser: lambda d: {},
-        bpy.types.NodeSocketStandard: 
-            lambda d: serialize_attr(node, d.default_value) if hasattr(d, "default_value") else None,
-        bpy.types.bpy_prop_collection: 
+        bpy.types.NodeSocketStandard:
+            lambda d: 
+                serialize_attr(node, d.default_value) if hasattr(d, "default_value") else None,
+        bpy.types.bpy_prop_collection:
             lambda d: [serialize_attr(node, element) for element in d.values()],
         bpy.types.bpy_prop_array: lambda d: [serialize_attr(node, element) for element in d],
     }
@@ -361,7 +362,7 @@ def serialize_attr(node, attr):
     for data_type, serializer in serializers.items():
         if isinstance(attr, data_type):
             return serializer(attr)
-        
+    
     try:
         pickle.dumps(attr)  # Try to pickle dump to get error message
     except (pickle.PicklingError, TypeError, AttributeError, EOFError):
