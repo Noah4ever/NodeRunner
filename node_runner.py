@@ -338,59 +338,40 @@ def serialize_attr(node, attr):
     Returns:
       Serialized attribute data
     """
-    data = attr
-    if isinstance(data, mathutils.Color):  # Color
-        data = serialize_color(data)
-    elif isinstance(data, mathutils.Vector):  # Vector
-        data = serialize_vector(data)
-    elif isinstance(data, mathutils.Euler):  # Euler
-        data = serialize_euler(data)
-    elif isinstance(data, bpy.types.ColorRamp):  # Color Ramp
-        data = serialize_color_ramp(node)
-    elif isinstance(data, bpy.types.ShaderNodeTree):
-        data = serialize_node_tree(node.node_tree)
-    elif isinstance(data, bpy.types.ColorMapping):  # Color Mapping
-        data = serialize_color_mapping(node)
-    elif isinstance(data, bpy.types.TexMapping):  # Texture Mapping
-        data = serialize_texture_mapping(node)
-    elif isinstance(data, bpy.types.CurveMapping):  # Curve Mapping
-        data = serialize_curve_mapping(node)
-    elif isinstance(data, bpy.types.CurveMap):  # Curve Map
-        data = serialize_curve_map(node, attr)
-    elif isinstance(data, bpy.types.CurveMapPoint):  # Curve Map Point
-        data = serialize_curve_map_point(node, attr)
-    elif isinstance(data, bpy.types.Image):  # Image
-        data = serialize_image(attr)
-    elif isinstance(data, bpy.types.ImageUser):  # Image User
-        return {}
-    elif isinstance(data, bpy.types.NodeSocketStandard):  # Node Socket Standard
-        if hasattr(data, "default_value"):
-            data = serialize_attr(node, data.default_value)
-        else:
-            data = None
-    elif isinstance(data, bpy.types.bpy_prop_collection):  # bpy_prop_collection
-        result = []
-        for element in data.values():
-            result.append(serialize_attr(node, element))
-        data = result
-    elif isinstance(data, bpy.types.bpy_prop_array):  # bpy_prop_array
-        result = []
-        for element in data:
-            result.append(serialize_attr(node, element))
-        data = result
+    serializers = {
+        mathutils.Color: serialize_color,
+        mathutils.Vector: serialize_vector,
+        mathutils.Euler: serialize_euler,
+        bpy.types.ColorRamp: lambda d: serialize_color_ramp(node),
+        bpy.types.ShaderNodeTree: lambda d: serialize_node_tree(node.node_tree),
+        bpy.types.ColorMapping: lambda d: serialize_color_mapping(node),
+        bpy.types.TexMapping: lambda d: serialize_texture_mapping(node),
+        bpy.types.CurveMapping: lambda d: serialize_curve_mapping(node),
+        bpy.types.CurveMap: lambda d: serialize_curve_map(node, d),
+        bpy.types.CurveMapPoint: lambda d: serialize_curve_map_point(node, d),
+        bpy.types.Image: serialize_image,
+        bpy.types.ImageUser: lambda d: {},
+        bpy.types.NodeSocketStandard: lambda d: serialize_attr(node, d.default_value) if hasattr(d, "default_value") else None,
+        bpy.types.bpy_prop_collection: lambda d: [serialize_attr(node, element) for element in d.values()],
+        bpy.types.bpy_prop_array: lambda d: [serialize_attr(node, element) for element in d],
+    }
 
+    for data_type, serializer in serializers.items():
+        if isinstance(attr, data_type):
+            return serializer(attr)
+        
     try:
-        pickle.dumps(data)  # Try to pickle dump to get error message
-    except (pickle.PicklingError, TypeError, AttributeError, EOFError):
+        pickle.dumps(attr)  # Try to pickle dump to get error message
+    except:
         print(
             "[ERROR] Serializing error on:",
             node.name,
             "with data:",
-            data,
+            attr,
             "and type:",
-            type(data),
+            type(attr),
         )
-    return data
+    return attr
 
 
 def serialize_node(node):
