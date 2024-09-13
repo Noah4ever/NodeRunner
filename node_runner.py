@@ -1,3 +1,12 @@
+"""
+This module adds the function to import and export
+shader nodes from Blender.
+
+It exports the shader nodes to a compressed and base64
+encoded string that can be easily shared via a text
+messager or comments in a video.
+"""
+
 import pickle
 import zlib
 import base64
@@ -235,7 +244,7 @@ def deserialize_outputs(node, data):
 
     """
 
-    # Output of NodeGroupInput and NodeGroupOutput cannot be set on the node 
+    # Output of NodeGroupInput and NodeGroupOutput cannot be set on the node
     # but need to be set on the group instead
     if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
         node, bpy.types.NodeGroupOutput
@@ -846,11 +855,13 @@ class NodeRunnerImport(bpy.types.Operator):
     )  # type: ignore
 
     def execute(self, context):
+        """ """
         decode_data(self.my_node_runner_string, bpy.context.material)
         self.report({"INFO"}, "Node Runner Import Main executed")
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        """ """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
@@ -868,9 +879,11 @@ class NodeRunnerExport(bpy.types.Operator):
     )  # type: ignore
 
     def execute(self, context):
+        """ """
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        """ """
         wm = context.window_manager
         material = bpy.context.object.active_material
         if not material or not hasattr(material, "node_tree"):
@@ -893,10 +906,12 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
     bl_label = "Node Runner Import Context Menu"
 
     def execute(self, context):
+        """ """
         bpy.ops.object.node_runner_import("INVOKE_DEFAULT")
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        """ """"
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
@@ -907,6 +922,7 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
     bl_label = "Node Runner Export Context Menu"
 
     def execute(self, context):
+        """ """
         selected_nodes = bpy.context.selected_nodes
         selected_node_names = (
             [node.name for node in selected_nodes] if selected_nodes else None
@@ -918,17 +934,20 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        """ """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
 
 def menu_func_node_runner_export(self, context):
+    """ """
     self.layout.operator(
         NodeRunnerExportContextMenu.bl_idname, text="Node Runner Export"
     )
 
 
 def menu_func_node_runner_import(self, context):
+    """ """
     self.layout.operator(
         NodeRunnerImportContextMenu.bl_idname, text="Node Runner Import"
     )
