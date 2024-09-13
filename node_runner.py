@@ -364,6 +364,7 @@ def serialize_attr(node, attr):
         bpy.types.CurveMapPoint: lambda d: serialize_curve_map_point(node, d),
         bpy.types.Image: serialize_image,
         bpy.types.ImageUser: lambda d: {},
+        bpy.types.Object: lambda d: None,
         bpy.types.NodeSocketStandard: lambda d: (
             serialize_attr(node, d.default_value)
             if hasattr(d, "default_value")
