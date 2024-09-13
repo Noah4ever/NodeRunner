@@ -843,7 +843,9 @@ def decode_data(base64_encoded, material):
 
 
 class NodeRunnerImport(bpy.types.Operator):
-    """ """
+    """ 
+    Class for import dialog
+    """
     bl_idname = "object.node_runner_import"
     bl_label = "Node Runner Import"
     bl_options = {"REGISTER", "UNDO"}
@@ -854,7 +856,7 @@ class NodeRunnerImport(bpy.types.Operator):
         description="Node Runner Hash",
     )  # type: ignore
 
-    def execute(self, context):
+    def execute(self):
         """
         Args:
           context: 
@@ -864,7 +866,7 @@ class NodeRunnerImport(bpy.types.Operator):
         self.report({"INFO"}, "Node Runner Import Main executed")
         return {"FINISHED"}
 
-    def invoke(self, context, event):
+    def invoke(self, context):
         """
         Args:
           context:
@@ -876,7 +878,9 @@ class NodeRunnerImport(bpy.types.Operator):
 
 
 class NodeRunnerExport(bpy.types.Operator):
-    """ """
+    """ 
+    Class for export dialog
+    """
     bl_idname = "object.node_runner_export"
     bl_label = "Node Runner Export"
     bl_options = {"REGISTER", "UNDO"}
@@ -887,7 +891,7 @@ class NodeRunnerExport(bpy.types.Operator):
         description="Node Runner Hash String",
     )  # type: ignore
 
-    def execute(self, context):
+    def execute(self):
         """
         Args:
           context: 
@@ -895,7 +899,7 @@ class NodeRunnerExport(bpy.types.Operator):
         """
         return {"FINISHED"}
 
-    def invoke(self, context, event):
+    def invoke(self, context):
         """
         Args:
           context:
@@ -919,11 +923,13 @@ class NodeRunnerExport(bpy.types.Operator):
 
 
 class NodeRunnerImportContextMenu(bpy.types.Operator):
-    """ """
+    """ 
+    Class for import option in context menu
+    """
     bl_idname = "object.node_runner_import_context_menu"
     bl_label = "Node Runner Import Context Menu"
 
-    def execute(self, context):
+    def execute(self):
         """
         Args:
           context: 
@@ -932,7 +938,7 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
         bpy.ops.object.node_runner_import("INVOKE_DEFAULT")
         return {"FINISHED"}
 
-    def invoke(self, context, event):
+    def invoke(self, context):
         """
         Args:
           context:
@@ -944,11 +950,13 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
 
 
 class NodeRunnerExportContextMenu(bpy.types.Operator):
-    """ """
+    """ 
+    Class for export option in context menu
+    """
     bl_idname = "object.node_runner_export_context_menu"
     bl_label = "Node Runner Export Context Menu"
 
-    def execute(self, context):
+    def execute(self):
         """
         Args:
           context:
@@ -974,7 +982,7 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         return wm.invoke_props_dialog(self)
 
 
-def menu_func_node_runner_export(self, context):
+def menu_func_node_runner_export(self):
     """
     Args:
       context:
@@ -985,7 +993,7 @@ def menu_func_node_runner_export(self, context):
     )
 
 
-def menu_func_node_runner_import(self, context):
+def menu_func_node_runner_import(self):
     """
     Args:
       context:
@@ -997,7 +1005,9 @@ def menu_func_node_runner_import(self, context):
 
 
 def register():
-    """ """
+    """ 
+    Register classes
+    """
     bpy.utils.register_class(NodeRunnerImportContextMenu)
     bpy.utils.register_class(NodeRunnerExportContextMenu)
     bpy.utils.register_class(NodeRunnerImport)
@@ -1009,7 +1019,9 @@ def register():
 
 
 def unregister():
-    """ """
+    """ 
+    Unregister classes
+    """
     bpy.types.NODE_MT_context_menu.remove(menu_func_node_runner_export)
     bpy.types.NODE_MT_context_menu.remove(menu_func_node_runner_import)
 
