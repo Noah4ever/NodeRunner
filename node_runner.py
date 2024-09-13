@@ -1,7 +1,7 @@
-import bpy
 import pickle
 import zlib
 import base64
+import bpy
 import mathutils
 
 
