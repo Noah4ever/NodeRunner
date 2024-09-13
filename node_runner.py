@@ -759,6 +759,9 @@ class NodeRunnerImport(bpy.types.Operator):
           context:
         Returns:
         """
+        if self.my_node_runner_string == "":
+            self.report({"INFO"}, "No Node Runner Hash String provided")
+            return {"CANCELLED"}
         decode_data(self.my_node_runner_string, bpy.context.material)
         self.report({"INFO"}, "Node Runner Import Main executed")
         return {"FINISHED"}
