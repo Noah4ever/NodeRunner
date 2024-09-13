@@ -752,7 +752,8 @@ class NodeRunnerImport(bpy.types.Operator):
         description="Node Runner Hash",
     )  # type: ignore
 
-    def execute(self):
+    # pylint: disable=unused-argument
+    def execute(self, context):
         """
         Args:
           context:
@@ -762,7 +763,8 @@ class NodeRunnerImport(bpy.types.Operator):
         self.report({"INFO"}, "Node Runner Import Main executed")
         return {"FINISHED"}
 
-    def invoke(self, context):
+    # pylint: disable=unused-argument
+    def invoke(self, context, event):
         """
         Args:
           context:
@@ -786,7 +788,8 @@ class NodeRunnerExport(bpy.types.Operator):
         description="Node Runner Hash String",
     )  # type: ignore
 
-    def execute(self):
+    # pylint: disable=unused-argument
+    def execute(self, context):
         """
         Args:
           context:
@@ -794,7 +797,8 @@ class NodeRunnerExport(bpy.types.Operator):
         """
         return {"FINISHED"}
 
-    def invoke(self, context):
+    # pylint: disable=unused-argument
+    def invoke(self, context, event):
         """
         Args:
           context:
@@ -823,7 +827,8 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
     bl_idname = "object.node_runner_import_context_menu"
     bl_label = "Node Runner Import Context Menu"
 
-    def execute(self):
+    # pylint: disable=unused-argument
+    def execute(self, context):
         """
         Args:
           context:
@@ -832,7 +837,8 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
         bpy.ops.object.node_runner_import("INVOKE_DEFAULT")
         return {"FINISHED"}
 
-    def invoke(self, context):
+    # pylint: disable=unused-argument
+    def invoke(self, context, event):
         """
         Args:
           context:
@@ -849,7 +855,8 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
     bl_idname = "object.node_runner_export_context_menu"
     bl_label = "Node Runner Export Context Menu"
 
-    def execute(self):
+    # pylint: disable=unused-argument
+    def execute(self, context):
         """
         Args:
           context:
@@ -865,7 +872,8 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
             bpy.ops.object.node_runner_export("INVOKE_DEFAULT")
         return {"FINISHED"}
 
-    def invoke(self, context):
+    # pylint: disable=unused-argument
+    def invoke(self, context, event):
         """
         Args:
           context:
@@ -875,7 +883,8 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         return wm.invoke_props_dialog(self)
 
 
-def menu_func_node_runner_export(self):
+# pylint: disable=unused-argument
+def menu_func_node_runner_export(self, context):
     """
     Args:
       context:
@@ -886,7 +895,8 @@ def menu_func_node_runner_export(self):
     )
 
 
-def menu_func_node_runner_import(self):
+# pylint: disable=unused-argument
+def menu_func_node_runner_import(self, context):
     """
     Args:
       context:
