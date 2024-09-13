@@ -1,0 +1,5 @@
+.md-header__button .md-logo,
+.md-logo > img {
+  width: 50px !important; /* Change this value to make it bigger */
+  height: auto !important; /* This keeps the aspect ratio intact */
+}
