@@ -204,7 +204,8 @@ def deserialize_inputs(node, data):
 
     """
 
-    # Inputs of NodeGroupInput and NodeGroupOutput cannot be set on the node but need to be set on the group instead
+    # Inputs of NodeGroupInput and NodeGroupOutput cannot be set on the node
+    # but need to be set on the group instead
     if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
         node, bpy.types.NodeGroupOutput
     ):
@@ -234,7 +235,8 @@ def deserialize_outputs(node, data):
 
     """
 
-    # Output of NodeGroupInput and NodeGroupOutput cannot be set on the node but need to be set on the group instead
+    # Output of NodeGroupInput and NodeGroupOutput cannot be set on the node 
+    # but need to be set on the group instead
     if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
         node, bpy.types.NodeGroupOutput
     ):
@@ -644,7 +646,8 @@ def get_socket_by_identifier(node, identifier, socket_type="INPUT"):
     """!
     Get socket by identifier
     
-    Loops through the input or output sockets of a node and returns the socket with the given identifier.
+    Loops through the input or output sockets of a node and 
+    returns the socket with the given identifier.
 
     Args:
       node: Node to get the socket from
@@ -693,7 +696,8 @@ def deserialize_link(node, node_names, link_data):
     Deserialize link
     
     Deserialize the link data and create a new link.
-    If the link is connected to a NodeGroupInput or NodeGroupOutput, create a new input or output socket on the ShaderNodeGroup.
+    If the link is connected to a NodeGroupInput or NodeGroupOutput, create 
+    a new input or output socket on the ShaderNodeGroup.
 
     Args:
       node: Node to deserialize the link on
@@ -842,28 +846,11 @@ class NodeRunnerImport(bpy.types.Operator):
     )  # type: ignore
 
     def execute(self, context):
-        """
-
-        Args:
-          context: 
-
-        Returns:
-
-        """
         decode_data(self.my_node_runner_string, bpy.context.material)
         self.report({"INFO"}, "Node Runner Import Main executed")
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        """
-
-        Args:
-          context: 
-          event: 
-
-        Returns:
-
-        """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
@@ -881,26 +868,9 @@ class NodeRunnerExport(bpy.types.Operator):
     )  # type: ignore
 
     def execute(self, context):
-        """
-
-        Args:
-          context: 
-
-        Returns:
-
-        """
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        """
-
-        Args:
-          context: 
-          event: 
-
-        Returns:
-
-        """
         wm = context.window_manager
         material = bpy.context.object.active_material
         if not material or not hasattr(material, "node_tree"):
@@ -923,27 +893,10 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
     bl_label = "Node Runner Import Context Menu"
 
     def execute(self, context):
-        """
-
-        Args:
-          context: 
-
-        Returns:
-
-        """
         bpy.ops.object.node_runner_import("INVOKE_DEFAULT")
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        """
-
-        Args:
-          context: 
-          event: 
-
-        Returns:
-
-        """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
@@ -954,15 +907,6 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
     bl_label = "Node Runner Export Context Menu"
 
     def execute(self, context):
-        """
-
-        Args:
-          context: 
-
-        Returns:
-
-        """
-
         selected_nodes = bpy.context.selected_nodes
         selected_node_names = (
             [node.name for node in selected_nodes] if selected_nodes else None
@@ -974,42 +918,17 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        """
-
-        Args:
-          context: 
-          event: 
-
-        Returns:
-
-        """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
 
 def menu_func_node_runner_export(self, context):
-    """
-
-    Args:
-      context: 
-
-    Returns:
-
-    """
     self.layout.operator(
         NodeRunnerExportContextMenu.bl_idname, text="Node Runner Export"
     )
 
 
 def menu_func_node_runner_import(self, context):
-    """
-
-    Args:
-      context: 
-
-    Returns:
-
-    """
     self.layout.operator(
         NodeRunnerImportContextMenu.bl_idname, text="Node Runner Import"
     )
