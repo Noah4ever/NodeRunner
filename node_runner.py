@@ -449,7 +449,7 @@ def serialize_attr(node, attr):
 
     try:
         pickle.dumps(data)  # Try to pickle dump to get error message
-    except:
+    except (pickle.PicklingError, TypeError, AttributeError, EOFError):
         print(
             "[ERROR] Serializing error on:",
             node.name,
@@ -962,7 +962,7 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         selected_node_names = (
             [node.name for node in selected_nodes] if selected_nodes else None
         )
-        if selected_node_names == None:
+        if selected_node_names is None:
             self.report({"WARNING"}, "No nodes selected!")
         else:
             bpy.ops.object.node_runner_export("INVOKE_DEFAULT")
@@ -1028,8 +1028,4 @@ def unregister():
 
 
 if __name__ == "__main__":
-    try:
-        unregister()  # Ensure any previously registered classes are unregistered first
-    except Exception as e:
-        print(f"Unregister failed: {e}")
     register()
