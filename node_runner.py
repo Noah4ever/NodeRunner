@@ -390,6 +390,19 @@ def deserialize_text(node, data):
       data: Data to deserialize
     Returns:
     """
+
+    # if data.filepath can be found in bpy.data.texts, use that text
+    text = next(
+        (
+            obj
+            for obj in bpy.context.blend_data.texts
+            if obj.filepath == data.get("filepath")
+        ),
+        None,
+    )
+    if text:
+        return text
+
     text = bpy.data.texts.new(name="Text")
     text.current_character = data.get("current_character", 0)
     deserialize_text_line(text.current_line, data.get("current_line", {}))
@@ -400,10 +413,7 @@ def deserialize_text(node, data):
     text.select_end_line_index = data.get("select_end_line_index", 0)
     text.use_module = data.get("use_module", False)
 
-    for line in data.get("lines", []):
-        deserialize_text_line(text.lines.new(), line)
-
-    node.text = text
+    return text
 
 
 def serialize_node_frame(node: bpy.types.NodeFrame):
@@ -449,6 +459,7 @@ def serialize_attr(node, attr):
         bpy.types.Image: serialize_image,
         bpy.types.ImageUser: lambda d: {},
         bpy.types.NodeFrame: lambda d: serialize_node_frame(node),
+        bpy.types.Text: lambda d: serialize_text(node.script),
         bpy.types.Object: lambda d: None,
         bpy.types.NodeSocketStandard: lambda d: (
             serialize_attr(node, d.default_value)
@@ -586,8 +597,9 @@ def deserialize_node(node_data, nodes):
             deserialize_inputs(new_node, prop_value)
         elif prop_name == "outputs":
             deserialize_outputs(new_node, prop_value)
+        elif prop_name == "script":
+            new_node.script = deserialize_text(new_node, prop_value)
         elif prop_name == "parent":
-            print("Parent:", prop_value)
             new_node.parent = nodes[prop_value]
         else:
             setattr(new_node, prop_name, prop_value)
