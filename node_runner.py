@@ -857,12 +857,20 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
 
     # pylint: disable=unused-argument
     def execute(self, context):
-        """
+        """Checks for a valid material and node tree and invokes
+        the import dialog
         Args:
           self:
           context:
         Returns:
         """
+        material = bpy.context.object.active_material
+        if not material:
+            self.report({"WARNING"}, "No valid material selected")
+            return {"CANCELLED"}
+        if not hasattr(material, "node_tree"):
+            self.report({"WARNING"}, "No node tree found")
+            return {"CANCELLED"}
         bpy.ops.object.node_runner_import("INVOKE_DEFAULT")
         return {"FINISHED"}
 
@@ -875,7 +883,6 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
           event:
         Returns:
         """
-        wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
 
