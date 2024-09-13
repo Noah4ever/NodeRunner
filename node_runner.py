@@ -95,7 +95,7 @@ def serialize_color_mapping(node):
     Returns:
       Serialized color mapping data
     """
-    data = {
+    return {
         "blend_color": serialize_color(node.color_mapping.blend_color),
         "blend_factor": node.color_mapping.blend_factor,
         "blend_type": node.color_mapping.blend_type,
@@ -105,7 +105,6 @@ def serialize_color_mapping(node):
         "saturation": node.color_mapping.saturation,
         "use_color_ramp": node.color_mapping.use_color_ramp,
     }
-    return data
 
 
 def deserialize_color_mapping(node, data):
@@ -134,7 +133,7 @@ def serialize_texture_mapping(node):
     Returns:
       Serialized texture mapping data
     """
-    data = {
+    return {
         "mapping": node.texture_mapping.mapping,
         "mapping_x": node.texture_mapping.mapping_x,
         "mapping_y": node.texture_mapping.mapping_y,
@@ -148,7 +147,6 @@ def serialize_texture_mapping(node):
         "use_min": node.texture_mapping.use_min,
         "vector_type": node.texture_mapping.vector_type,
     }
-    return data
 
 
 def deserialize_texture_mapping(node, data):
@@ -231,7 +229,7 @@ def serialize_curve_mapping(node):
     Returns:
       Serialized curve mapping data
     """
-    data = {
+    return {
         "black_level": serialize_attr(node, node.mapping.black_level),
         "clip_max_x": node.mapping.clip_max_x,
         "clip_max_y": node.mapping.clip_max_y,
@@ -243,7 +241,6 @@ def serialize_curve_mapping(node):
         "use_clip": node.mapping.use_clip,
         "white_level": serialize_attr(node, node.mapping.white_level),
     }
-    return data
 
 
 def deserialize_curve_mapping(node, data):
@@ -281,10 +278,9 @@ def serialize_curve_map(node, curve_map: bpy.types.CurveMap):
     Returns:
       Serialized curve map data
     """
-    data = {
+    return {
         "points": serialize_attr(node, curve_map.points),
     }
-    return data
 
 
 def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
@@ -297,12 +293,11 @@ def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
     Returns:
       Serialized curve map point data
     """
-    data = {
+    return {
         "handle_type": curve_map_point.handle_type,
         "location": serialize_attr(node, curve_map_point.location),
         "select": curve_map_point.select,
     }
-    return data
 
 
 def serialize_image(image: bpy.types.Image):
@@ -315,10 +310,9 @@ def serialize_image(image: bpy.types.Image):
     Returns:
       dict: Serialized image data.
     """
-    data = {
+    return {
         "name": image.name,
     }
-    return data
 
 
 def deserialize_image(node, data):
@@ -336,6 +330,96 @@ def deserialize_image(node, data):
     if not image:
         return
     node.image = image
+
+
+def serialize_text_line(text: bpy.types.TextLine):
+    """Serialize text line
+
+    Args:
+        text: Text line to serialize
+    Returns:
+        Serialized text line data
+    """
+    return {
+        "body": text.body,
+    }
+
+
+def deserialize_text_line(text_line, data):
+    """Deserialize text line
+
+    Args:
+      node: Node to set text line data
+      data: Data to deserialize
+    Returns:
+    """
+    text_line.body = data.get("body", "")
+
+
+def serialize_text(text: bpy.types.Text):
+    """Serialize text
+
+    Args:
+      text: Text to serialize
+    Returns:
+      Serialized text data
+    """
+
+    serializes_lines = []
+    for line in text.lines:
+        serializes_lines.append(serialize_text_line(line))
+
+    return {
+        "current_character": text.current_character,
+        "current_line": serialize_text_line(text.current_line),
+        "current_line_index": text.current_line_index,
+        "filepath": text.filepath,
+        "indentation": text.indentation,
+        "lines": serializes_lines,
+        "select_end_character": text.select_end_character,
+        "select_end_line_index": text.select_end_line_index,
+        "use_module": text.use_module,
+    }
+
+
+def deserialize_text(node, data):
+    """Deserialize text
+
+    Args:
+      node: Node to set text data
+      data: Data to deserialize
+    Returns:
+    """
+    text = bpy.data.texts.new(name="Text")
+    text.current_character = data.get("current_character", 0)
+    deserialize_text_line(text.current_line, data.get("current_line", {}))
+    text.current_line_index = data.get("current_line_index", 0)
+    text.filepath = data.get("filepath", "")
+    text.indentation = data.get("indentation", 0)
+    text.select_end_character = data.get("select_end_character", 0)
+    text.select_end_line_index = data.get("select_end_line_index", 0)
+    text.use_module = data.get("use_module", False)
+
+    for line in data.get("lines", []):
+        deserialize_text_line(text.lines.new(), line)
+
+    node.text = text
+
+
+def serialize_node_frame(node: bpy.types.NodeFrame):
+    """Serialize node frame
+
+    Args:
+      node: Node to serialize
+    Returns:
+      Serialized node frame data
+    """
+    print(node)
+    return {
+        "label_size": node.label_size,
+        "shrink": node.shrink,
+        "text": serialize_text(node.text),
+    }
 
 
 def serialize_attr(node, attr):
@@ -364,8 +448,8 @@ def serialize_attr(node, attr):
         bpy.types.CurveMapPoint: lambda d: serialize_curve_map_point(node, d),
         bpy.types.Image: serialize_image,
         bpy.types.ImageUser: lambda d: {},
+        bpy.types.NodeFrame: lambda d: serialize_node_frame(node),
         bpy.types.Object: lambda d: None,
-        bpy.types.NodeSocketStandard: lambda d: (
             serialize_attr(node, d.default_value)
             if hasattr(d, "default_value")
             else None
@@ -448,9 +532,14 @@ def serialize_node(node):
         attr = getattr(node, prop)
         if attr is None:
             continue
+        if prop == "parent":
+            # Serialize parent node name for NodeFrame's
+            node_dict["parent"] = node.parent.name
+            continue
         node_dict[prop] = serialize_attr(node, attr)
     node_dict["type"] = node.bl_idname
     node_dict["label"] = node.label
+
     return node_dict
 
 
@@ -496,6 +585,9 @@ def deserialize_node(node_data, nodes):
             deserialize_inputs(new_node, prop_value)
         elif prop_name == "outputs":
             deserialize_outputs(new_node, prop_value)
+        elif prop_name == "parent":
+            print("Parent:", prop_value)
+            new_node.parent = nodes[prop_value]
         else:
             setattr(new_node, prop_name, prop_value)
     return new_node
@@ -677,6 +769,53 @@ def deserialize_link(node, node_names, link_data):
     return output_socket, input_socket
 
 
+def build_node_parent_name_map(data, node_tree):
+    """
+    Build a mapping of old node names to new node names (for frames).
+
+    Args:
+        data: Serialized data containing the node structure.
+        node_tree: The node tree where new nodes will be added.
+
+    Returns:
+        node_parent_name: A dictionary mapping old node names to new names.
+    """
+    node_parent_name = {}
+
+    # Create nodes for frames first to ensure they exist
+    for node_name, node_data in data["nodes"].items():
+        if node_data["type"] == "NodeFrame":  # Nur Frames behandeln
+            new_node = deserialize_node(node_data, node_tree.nodes)
+            new_node.name = node_data["name"]
+
+            # If the name was changed, map the old name to the new name
+            if new_node.name != node_name:
+                node_parent_name[node_name] = new_node.name
+            else:
+                node_parent_name[node_name] = node_name
+
+    # Remove the frame nodes from the node list
+    for node_name in node_parent_name:
+        data["nodes"].pop(node_name)
+
+    return node_parent_name
+
+
+def update_parent_references(data, node_parent_name):
+    """
+    Update the parent references in the serialized node data based on the new node names.
+
+    Args:
+        data: Serialized data containing the node structure.
+        node_parent_name: A mapping from old node names to new node names.
+    """
+    for node_name, node_data in data["nodes"].items():
+        # Check if the node has a parent frame
+        if "parent" in node_data and node_data["parent"] in node_parent_name:
+            # Update the parent frame to the new name
+            node_data["parent"] = node_parent_name[node_data["parent"]]
+
+
 def deserialize_node_tree(node, data):
     """Deserialize node tree
 
@@ -689,9 +828,16 @@ def deserialize_node_tree(node, data):
     """
     node_names = {}
 
+    node_parent_name = {}
+
     if isinstance(node, bpy.types.ShaderNodeGroup):
         node.node_tree = bpy.data.node_groups.new(data["name"], "ShaderNodeTree")
 
+    node_parent_name = build_node_parent_name_map(data, node.node_tree)
+
+    update_parent_references(data, node_parent_name)
+
+    print(data["nodes"])
     # Save the new node with the node name which is used for linking to get the node
     for node_name, node_data in data["nodes"].items():
         node_names[node_name] = deserialize_node(node_data, node.node_tree.nodes)
