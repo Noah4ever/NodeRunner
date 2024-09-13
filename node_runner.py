@@ -215,19 +215,17 @@ def deserialize_inputs(node, data):
 
     # Inputs of NodeGroupInput and NodeGroupOutput cannot be set on the node
     # but need to be set on the group instead
-    if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
-        node, bpy.types.NodeGroupOutput
-    ):
+    if isinstance(node, (bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput)):
         return
 
-    for i, input in enumerate(data):
+    for i, input_value in enumerate(data):
         if (
-            input is not None
+            input_value is not None
             and hasattr(node, "inputs")
             and len(node.inputs) > 0
             and hasattr(node.inputs[i], "default_value")
         ):
-            node.inputs[i].default_value = input
+            node.inputs[i].default_value = input_value
 
 
 def deserialize_outputs(node, data):
@@ -246,9 +244,7 @@ def deserialize_outputs(node, data):
 
     # Output of NodeGroupInput and NodeGroupOutput cannot be set on the node
     # but need to be set on the group instead
-    if isinstance(node, bpy.types.NodeGroupInput) or isinstance(
-        node, bpy.types.NodeGroupOutput
-    ):
+    if isinstance(node, (bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput)):
         return
 
     for i, output in enumerate(data):
@@ -356,7 +352,7 @@ def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
     return data
 
 
-def serialize_image(node, image: bpy.types.Image):
+def serialize_image(image: bpy.types.Image):
     """Serialize image.
 
     Args:
@@ -432,7 +428,7 @@ def serialize_attr(node, attr):
     elif isinstance(data, bpy.types.CurveMapPoint):  # Curve Map Point
         data = serialize_curve_map_point(node, attr)
     elif isinstance(data, bpy.types.Image):  # Image
-        data = serialize_image(node, attr)
+        data = serialize_image(attr)
     elif isinstance(data, bpy.types.ImageUser):  # Image User
         return {}
     elif isinstance(data, bpy.types.NodeSocketStandard):  # Node Socket Standard
@@ -624,7 +620,7 @@ def serialize_node_tree(node_tree, selected_node_names=None):
     return data
 
 
-def get_node_socket_base_type(type):
+def get_node_socket_base_type(socket_type):
     """Get base type of node socket.
     
     This is used to create new sockets on the ShaderNodeGroup.
@@ -646,7 +642,7 @@ def get_node_socket_base_type(type):
         "NodeSocketColor",
     ]
     for usable_type in usable_type_array:
-        if usable_type in type:
+        if usable_type in socket_type:
             return usable_type
     return usable_type_array[0]
 
