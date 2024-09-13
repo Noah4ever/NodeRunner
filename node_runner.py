@@ -464,6 +464,9 @@ def deserialize_node(node_data, nodes):
     Returns:
       New node
     """
+    if node_data["type"] == "NodeUndefined":
+        return None
+
     new_node = nodes.new(type=node_data["type"])  # Create new node
     new_node.label = node_data["label"]  # Set node label
 
@@ -624,6 +627,13 @@ def deserialize_link(node, node_names, link_data):
     Returns:
       Output and input socket of the link
     """
+    if (
+        node_names[link_data["from_node"]] is None
+        or node_names[link_data["to_node"]] is None
+    ):
+        print("[ERROR] Node not found")
+        return None, None
+
     # === From node ===
     from_node = node_names[link_data["from_node"]]
     output_socket = get_socket_by_identifier(
@@ -690,7 +700,8 @@ def deserialize_node_tree(node, data):
         # Deserialize link
         input_socket, output_socket = deserialize_link(node, node_names, link_data)
         # Create new link
-        node.node_tree.links.new(input_socket, output_socket)
+        if input_socket and output_socket:
+            node.node_tree.links.new(input_socket, output_socket)
 
 
 def encode_data(node_tree, selected_node_names=None):
