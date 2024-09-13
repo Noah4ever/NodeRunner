@@ -7,6 +7,7 @@ encoded string that can be easily shared via a text
 messager or comments in a video.
 """
 
+import binascii
 import pickle
 import zlib
 import base64
@@ -724,6 +725,7 @@ def decode_data(base64_encoded, material):
       base64_encoded: Base64 encoded data
       material: Material to set the node tree on
     Returns:
+      Result of the operation: ("FINISHED", "Node Runner Import executed")
     """
 
     # Create new material if none is selected
@@ -733,10 +735,17 @@ def decode_data(base64_encoded, material):
             bpy.context.active_object.data.materials.append(material)
 
     # Decode base64 encoded data
-    deserialized_data = pickle.loads(zlib.decompress(base64.b64decode(base64_encoded)))
+    try:
+        decompressed_data = zlib.decompress(base64.b64decode(base64_encoded))
+        deserialized_data = pickle.loads(decompressed_data)
+    except (zlib.error, pickle.UnpicklingError, binascii.Error):
+        return ("CANCELLED", "Decoding error")
+    except Exception as e:
+        return ("CANCELLED", f"Decoding error: {e}")
 
     # Deserialize node tree
     deserialize_node_tree(material, deserialized_data)
+    return ("FINISHED", "Node Runner Import executed")
 
 
 class NodeRunnerImport(bpy.types.Operator):
@@ -756,20 +765,23 @@ class NodeRunnerImport(bpy.types.Operator):
     def execute(self, context):
         """
         Args:
+          self:
           context:
         Returns:
         """
         if self.my_node_runner_string == "":
             self.report({"INFO"}, "No Node Runner Hash String provided")
             return {"CANCELLED"}
-        decode_data(self.my_node_runner_string, bpy.context.material)
-        self.report({"INFO"}, "Node Runner Import Main executed")
-        return {"FINISHED"}
+        result = decode_data(self.my_node_runner_string, bpy.context.material)
+
+        self.report({"INFO"}, result[1])
+        return {result[0]}
 
     # pylint: disable=unused-argument
     def invoke(self, context, event):
         """
         Args:
+          self:
           context:
           event:
         Returns:
@@ -795,6 +807,7 @@ class NodeRunnerExport(bpy.types.Operator):
     def execute(self, context):
         """
         Args:
+          self:
           context:
         Returns:
         """
@@ -804,6 +817,7 @@ class NodeRunnerExport(bpy.types.Operator):
     def invoke(self, context, event):
         """
         Args:
+          self:
           context:
           event:
         Returns:
@@ -834,6 +848,7 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
     def execute(self, context):
         """
         Args:
+          self:
           context:
         Returns:
         """
@@ -844,6 +859,7 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
     def invoke(self, context, event):
         """
         Args:
+          self:
           context:
           event:
         Returns:
@@ -862,6 +878,7 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
     def execute(self, context):
         """
         Args:
+          self:
           context:
         Returns:
         """
@@ -879,7 +896,9 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
     def invoke(self, context, event):
         """
         Args:
+          self:
           context:
+          event:
         Returns:
         """
         wm = context.window_manager
@@ -890,6 +909,7 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
 def menu_func_node_runner_export(self, context):
     """
     Args:
+      self:
       context:
     Returns:
     """
@@ -902,6 +922,7 @@ def menu_func_node_runner_export(self, context):
 def menu_func_node_runner_import(self, context):
     """
     Args:
+      self:
       context:
     Returns:
     """
