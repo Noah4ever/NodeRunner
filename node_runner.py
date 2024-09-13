@@ -449,7 +449,7 @@ def serialize_attr(node, attr):
         bpy.types.Image: serialize_image,
         bpy.types.ImageUser: lambda d: {},
         bpy.types.NodeFrame: lambda d: serialize_node_frame(node),
-        bpy.types.NodeSocketStandard: lambda d: (
+        bpy.types.Object: lambda d: None,
             serialize_attr(node, d.default_value)
             if hasattr(d, "default_value")
             else None
