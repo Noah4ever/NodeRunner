@@ -968,7 +968,7 @@ class NodeRunnerExport(bpy.types.Operator):
     bl_label = "Node Runner Export"
     bl_options = {"REGISTER", "UNDO"}
 
-    my_node_runner_string: bpy.props.StringProperty(
+    node_runner_export_field: bpy.props.StringProperty(
         name="Node Runner Hash String",
         default="",
         description="Node Runner Hash String",
@@ -983,6 +983,15 @@ class NodeRunnerExport(bpy.types.Operator):
         Returns:
         """
         return {"FINISHED"}
+
+    def draw(self, context):
+        layout = self.layout
+
+        # Show some text
+        layout.label(text="Hash has been copied to clipboard")
+
+        # Create the input field
+        layout.prop(self, "node_runner_export_field", text="Export Field")
 
     # pylint: disable=unused-argument
     def invoke(self, context, event):
@@ -1003,9 +1012,12 @@ class NodeRunnerExport(bpy.types.Operator):
         selected_node_names = (
             [node.name for node in selected_nodes] if selected_nodes else None
         )
-        self.my_node_runner_string = encode_data(
+        compress_nodes = encode_data(
             material.node_tree, selected_node_names=selected_node_names
         )
+        self.report({"INFO"}, "Node Runner Hash copied to clipboard")
+        self.node_runner_export_field = compress_nodes
+        bpy.context.window_manager.clipboard = compress_nodes
         return wm.invoke_props_dialog(self)
 
 
@@ -1043,6 +1055,7 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
           event:
         Returns:
         """
+        wm = context.window_manager
         return wm.invoke_props_dialog(self)
 
 
