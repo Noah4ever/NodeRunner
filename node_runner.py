@@ -235,7 +235,7 @@ def serialize_curve_mapping(node):
         "clip_max_y": node.mapping.clip_max_y,
         "clip_min_x": node.mapping.clip_min_x,
         "clip_min_y": node.mapping.clip_min_y,
-        "curves": serialize_attr(node, node.mapping.curves),  # Serialzing curces
+        "curves": serialize_attr(node, node.mapping.curves), 
         "extend": node.mapping.extend,
         "tone": node.mapping.tone,
         "use_clip": node.mapping.use_clip,
@@ -252,16 +252,27 @@ def deserialize_curve_mapping(node, data):
     Returns:
     """
     node.mapping.black_level = data.get("black_level", (0.0, 0.0, 0.0))
+
+    i = 0
+    for curve_map in data.get("curves", 0):
+        
+        j = 0
+        # Set first and last point because by default there are two points in a new curve
+        for point in node.mapping.curves[i].points:
+            point.location = curve_map.get("points")[j].get("location", (0.0, 0.0))
+            j -= 1
+
+        # Create and set the rest of the points
+        for k in  range(1, len(curve_map.get("points")) - 1):
+            location = curve_map.get("points")[k].get("location", (0.0, 0.0))
+            node.mapping.curves[i].points.new(location[0], location[1])
+        i += 1
+
     node.mapping.clip_max_x = data.get("clip_max_x", 0)
     node.mapping.clip_max_y = data.get("clip_max_y", 0)
     node.mapping.clip_min_x = data.get("clip_min_x", 0)
     node.mapping.clip_min_y = data.get("clip_min_y", 0)
-    i = 0
-    for curve_map in data.get("curves", 0):
-        for point in curve_map.get("points"):
-            location = point.get("location", (0.0, 0.0))
-            node.mapping.curves[i].points.new(location[0], location[1])
-        i += 1
+
     node.mapping.extend = data.get("extend", 0)
     node.mapping.tone = data.get("tone", 0)
     node.mapping.use_clip = data.get("use_clip", 0)
@@ -424,7 +435,6 @@ def serialize_node_frame(node: bpy.types.NodeFrame):
     Returns:
       Serialized node frame data
     """
-    print(node)
     return {
         "label_size": node.label_size,
         "shrink": node.shrink,
@@ -458,7 +468,7 @@ def serialize_attr(node, attr):
         bpy.types.CurveMapPoint: lambda d: serialize_curve_map_point(node, d),
         bpy.types.Image: serialize_image,
         bpy.types.ImageUser: lambda d: {},
-        bpy.types.NodeFrame: lambda d: serialize_node_frame(node),
+        bpy.types.NodeFrame: lambda d: serialize_node_frame(node, d),
         bpy.types.Text: lambda d: serialize_text(node.script),
         bpy.types.Object: lambda d: None,
         bpy.types.NodeSocketStandard: lambda d: (
@@ -505,6 +515,7 @@ def serialize_node(node):
         "__doc__",
         "__module__",
         "__slots__",
+        "__slotnames__",
         "bl_description",
         "bl_height_default",
         "bl_height_max",
@@ -551,7 +562,6 @@ def serialize_node(node):
         node_dict[prop] = serialize_attr(node, attr)
     node_dict["type"] = node.bl_idname
     node_dict["label"] = node.label
-
     return node_dict
 
 
@@ -574,7 +584,8 @@ def deserialize_node(node_data, nodes):
 
     # Node tree has to be done before other properties like inputs and outputs
     if "node_tree" in node_data:
-        deserialize_node_tree(new_node, node_data["node_tree"])
+        new_node.node_tree = bpy.data.node_groups.new(node_data["node_tree"]["name"], "ShaderNodeTree")
+        deserialize_node_tree(new_node.node_tree, node_data["node_tree"])
         node_data.pop("node_tree")
 
     readonly_props = ["type", "image_user"]
@@ -599,7 +610,7 @@ def deserialize_node(node_data, nodes):
             deserialize_outputs(new_node, prop_value)
         elif prop_name == "script":
             new_node.script = deserialize_text(new_node, prop_value)
-        elif prop_name == "parent":
+        elif prop_name == "parent" and prop_value in nodes:
             new_node.parent = nodes[prop_value]
         else:
             setattr(new_node, prop_name, prop_value)
@@ -621,12 +632,14 @@ def serialize_node_tree(node_tree, selected_node_names=None):
 
     # Initialize empty data structure for nodes and links
     data = {"nodes": {}, "links": []}
-
+    selected_nodes = []
     if selected_node_names is None:
         selected_nodes = list(node_tree.nodes)
     else:
-        selected_nodes = [nodes[node_name] for node_name in selected_node_names]
-
+        for node_name in selected_node_names:
+            if node_name in nodes:
+                selected_nodes.append(nodes[node_name])
+            
     # Serialize selected nodes
     for node in selected_nodes:
         node_dict = serialize_node(node)
@@ -719,7 +732,7 @@ def create_socket(node_tree, socket_name, description, in_out, socket_type):
     )
 
 
-def deserialize_link(node, node_names, link_data):
+def deserialize_link(node_tree, node_names, link_data):
     """Deserialize link
 
     Deserialize the link data and create a new link.
@@ -750,7 +763,7 @@ def deserialize_link(node, node_names, link_data):
         # Create new input socket on the ShaderNodeGroup
         if output_socket is None:
             output_interface_socket: bpy.types.NodeTreeInterfaceSocket = create_socket(
-                node.node_tree,
+                node_tree,
                 link_data["from_socket"],
                 link_data["from_socket"] + " Input",
                 "INPUT",
@@ -769,7 +782,7 @@ def deserialize_link(node, node_names, link_data):
         # Create new output socket on the ShaderNodeGroup
         if input_socket is None:
             input_interface_socket: bpy.types.NodeTreeInterfaceSocket = create_socket(
-                node.node_tree,
+                node_tree,
                 link_data["to_socket"],
                 link_data["to_socket"] + " Output",
                 "OUTPUT",
@@ -794,10 +807,11 @@ def build_node_parent_name_map(data, node_tree):
         node_parent_name: A dictionary mapping old node names to new names.
     """
     node_parent_name = {}
+    node_frame_location = {}
 
     # Create nodes for frames first to ensure they exist
     for node_name, node_data in data["nodes"].items():
-        if node_data["type"] == "NodeFrame":  # Nur Frames behandeln
+        if node_data["type"] == "NodeFrame": 
             new_node = deserialize_node(node_data, node_tree.nodes)
             new_node.name = node_data["name"]
 
@@ -806,12 +820,15 @@ def build_node_parent_name_map(data, node_tree):
                 node_parent_name[node_name] = new_node.name
             else:
                 node_parent_name[node_name] = node_name
+                        
+            node_frame_location[node_parent_name[node_name]] = new_node.location
+            #new_node.location = [0, 0]
 
     # Remove the frame nodes from the node list
     for node_name in node_parent_name:
         data["nodes"].pop(node_name)
 
-    return node_parent_name
+    return node_parent_name, node_frame_location
 
 
 def update_parent_references(data, node_parent_name):
@@ -828,8 +845,7 @@ def update_parent_references(data, node_parent_name):
             # Update the parent frame to the new name
             node_data["parent"] = node_parent_name[node_data["parent"]]
 
-
-def deserialize_node_tree(node, data):
+def deserialize_node_tree(node_tree, data):
     """Deserialize node tree
 
     Deserialize the node tree data and create new nodes and links.
@@ -842,26 +858,33 @@ def deserialize_node_tree(node, data):
     node_names = {}
 
     node_parent_name = {}
+    node_frame_location = {}
 
-    if isinstance(node, bpy.types.ShaderNodeGroup):
-        node.node_tree = bpy.data.node_groups.new(data["name"], "ShaderNodeTree")
-
-    node_parent_name = build_node_parent_name_map(data, node.node_tree)
+    node_parent_name, node_frame_location = build_node_parent_name_map(data, node_tree)
 
     update_parent_references(data, node_parent_name)
 
-    print(data["nodes"])
     # Save the new node with the node name which is used for linking to get the node
     for node_name, node_data in data["nodes"].items():
-        node_names[node_name] = deserialize_node(node_data, node.node_tree.nodes)
+        node_names[node_name] = deserialize_node(node_data, node_tree.nodes)
+        # Setting correct location for frames
+        if node_names[node_name].parent and isinstance(node_names[node_name].parent, bpy.types.NodeFrame):
+            node_frame_name = node_names[node_name].parent.name
+            if node_frame_name in node_frame_location:
+                location = node_frame_location[node_frame_name]
+                node_names[node_name].location = node_names[node_name].location + location
+            else:
+                # Remove parent from created node if its not inside the current deserialized nodes
+                node_names[node_name].parent = None
+
 
     # Apply links
     for link_data in data["links"]:
         # Deserialize link
-        input_socket, output_socket = deserialize_link(node, node_names, link_data)
+        input_socket, output_socket = deserialize_link(node_tree, node_names, link_data)
         # Create new link
         if input_socket and output_socket:
-            node.node_tree.links.new(input_socket, output_socket)
+            node_tree.links.new(input_socket, output_socket)
 
 
 def encode_data(node_tree, selected_node_names=None):
@@ -914,8 +937,9 @@ def decode_data(base64_encoded, material):
     except Exception as e:
         return ("CANCELLED", f"Decoding error: {e}")
 
+
     # Deserialize node tree
-    deserialize_node_tree(material, deserialized_data)
+    deserialize_node_tree(bpy.context.space_data.edit_tree, deserialized_data)
     return ("FINISHED", "Node Runner Import executed")
 
 
@@ -943,7 +967,10 @@ class NodeRunnerImport(bpy.types.Operator):
         if self.my_node_runner_string == "":
             self.report({"INFO"}, "No Node Runner Hash String provided")
             return {"CANCELLED"}
-        result = decode_data(self.my_node_runner_string, bpy.context.material)
+        
+        
+
+        result = decode_data(self.my_node_runner_string.split("__NR", 1)[1], bpy.context.material)
 
         self.report({"INFO"}, result[1])
         return {result[0]}
@@ -982,6 +1009,7 @@ class NodeRunnerExport(bpy.types.Operator):
           context:
         Returns:
         """
+
         return {"FINISHED"}
 
     def draw(self, context):
@@ -1009,15 +1037,21 @@ class NodeRunnerExport(bpy.types.Operator):
             return {"CANCELLED"}
 
         selected_nodes = bpy.context.selected_nodes
-        selected_node_names = (
-            [node.name for node in selected_nodes] if selected_nodes else None
-        )
+        selected_node_names = []
+        for node in selected_nodes:
+            # NodeGroupInput and NodeGroupOutput are generated automatically by a NodeGroup and cannot be exported/imported
+            if selected_nodes and not isinstance(node, (bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput)):
+                selected_node_names.append(node.name)
+
         compress_nodes = encode_data(
-            material.node_tree, selected_node_names=selected_node_names
+            bpy.context.space_data.edit_tree, selected_node_names=selected_node_names
         )
         self.report({"INFO"}, "Node Runner Hash copied to clipboard")
-        self.node_runner_export_field = compress_nodes
-        bpy.context.window_manager.clipboard = compress_nodes
+
+        compress_nodes_with_header = "YourNodeName__NR" + compress_nodes
+
+        self.node_runner_export_field = compress_nodes_with_header
+        bpy.context.window_manager.clipboard = compress_nodes_with_header
         return wm.invoke_props_dialog(self)
 
 
@@ -1077,10 +1111,21 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         selected_node_names = (
             [node.name for node in selected_nodes] if selected_nodes else None
         )
+
         if selected_node_names is None:
             self.report({"WARNING"}, "No nodes selected!")
-        else:
-            bpy.ops.object.node_runner_export("INVOKE_DEFAULT")
+            return {"CANCELLED"}
+        
+        nodes = bpy.context.space_data.edit_tree.nodes
+        i = 0
+        for selected_node in selected_node_names:
+            if not isinstance(nodes[selected_node], (bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput)):
+                i += 1
+        if i == 0:
+            self.report({"WARNING"}, "No valid nodes selected!")
+            return {"CANCELLED"}
+                
+        bpy.ops.object.node_runner_export("INVOKE_DEFAULT")
         return {"FINISHED"}
 
     # pylint: disable=unused-argument
