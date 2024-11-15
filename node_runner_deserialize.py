@@ -205,6 +205,7 @@ def deserialize_text(data):
 
     return text
 
+#pylint: disable=too-many-branches
 def deserialize_node(node_data, nodes):
     """Deserialize node
 
@@ -235,7 +236,6 @@ def deserialize_node(node_data, nodes):
             continue
 
         # Special handling for complex types
-        #pylint: disable=too-many-arguments
         if prop_name == "color_ramp":
             deserialize_color_ramp(new_node, prop_value)
         elif prop_name == "color_mapping":
