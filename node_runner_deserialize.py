@@ -205,6 +205,7 @@ def deserialize_text(data):
 
     return text
 
+#pylint: disable=too-many-arguments
 def deserialize_node(node_data, nodes):
     """Deserialize node
 
@@ -499,7 +500,7 @@ def decode_data(base64_encoded, material):
         deserialized_data = pickle.loads(decompressed_data)
     except (zlib.error, pickle.UnpicklingError, binascii.Error):
         return ("CANCELLED", "Decoding error")
-    except Exception as e:
+    except (Exception,) as e:
         return ("CANCELLED", f"Decoding error: {e}")
 
 

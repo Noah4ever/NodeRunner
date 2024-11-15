@@ -242,7 +242,7 @@ def serialize_attr(node, attr):
         bpy.types.CurveMapPoint: lambda d: serialize_curve_map_point(node, d),
         bpy.types.Image: serialize_image,
         bpy.types.ImageUser: lambda d: {},
-        bpy.types.NodeFrame: lambda d: serialize_node_frame(node, d),
+        bpy.types.NodeFrame: lambda d: serialize_node_frame(node),
         bpy.types.Text: lambda d: serialize_text(node.script),
         bpy.types.Object: lambda d: None,
         bpy.types.NodeSocketStandard: lambda d: (
@@ -429,7 +429,14 @@ class NodeRunnerExport(bpy.types.Operator):
 
         return {"FINISHED"}
 
+    # pylint: disable=unused-argument
     def draw(self, context):
+        """
+        Args:
+          self:
+          context:
+        Returns:
+        """
         layout = self.layout
 
         # Show some text
@@ -500,7 +507,7 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         nodes = bpy.context.space_data.edit_tree.nodes
         i = 0
         for selected_node in selected_node_names:
-            if not isinstance(nodes[selected_node], 
+            if not isinstance(nodes[selected_node],
                               (bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput)):
                 i += 1
         if i == 0:
