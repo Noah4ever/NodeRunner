@@ -1,9 +1,12 @@
+"""
+This module provides deserialize functions and classes.
+"""
+
 import binascii
 import pickle
 import zlib
 import base64
 import bpy
-
 
 def deserialize_color_ramp(node, data):
     """Deserialize color ramp
@@ -22,9 +25,6 @@ def deserialize_color_ramp(node, data):
         element.position = element_data["position"]
         element.color = element_data["color"]
 
-
-
-
 def deserialize_color_mapping(node, data):
     """Deserialize color mapping
 
@@ -41,9 +41,6 @@ def deserialize_color_mapping(node, data):
     node.color_mapping.contrast = data.get("contrast", 0)
     node.color_mapping.saturation = data.get("saturation", 0)
     node.color_mapping.use_color_ramp = data.get("use_color_ramp", 0)
-
-
-
 
 def deserialize_texture_mapping(node, data):
     """Deserialize texture mapping
@@ -65,7 +62,6 @@ def deserialize_texture_mapping(node, data):
     node.texture_mapping.use_max = data.get("use_max", False)
     node.texture_mapping.use_min = data.get("use_min", False)
     node.texture_mapping.vector_type = data.get("vector_type", 0)
-
 
 def deserialize_inputs(node, data):
     """Deserialize inputs
@@ -91,7 +87,6 @@ def deserialize_inputs(node, data):
         ):
             node.inputs[i].default_value = input_value
 
-
 def deserialize_outputs(node, data):
     """Deserialize outputs
 
@@ -116,7 +111,6 @@ def deserialize_outputs(node, data):
         ):
             node.outputs[i].default_value = output
 
-
 def deserialize_curve_mapping(node, data):
     """Deserialize curve mapping
 
@@ -129,7 +123,7 @@ def deserialize_curve_mapping(node, data):
 
     i = 0
     for curve_map in data.get("curves", 0):
-        
+
         j = 0
         # Set first and last point because by default there are two points in a new curve
         for point in node.mapping.curves[i].points:
@@ -152,8 +146,6 @@ def deserialize_curve_mapping(node, data):
     node.mapping.use_clip = data.get("use_clip", 0)
     node.mapping.white_level = data.get("white_level", (0.0, 0.0, 0.0))
 
-
-
 def deserialize_image(node, data):
     """Deserialize image
 
@@ -170,8 +162,6 @@ def deserialize_image(node, data):
         return
     node.image = image
 
-
-
 def deserialize_text_line(text_line, data):
     """Deserialize text line
 
@@ -182,8 +172,7 @@ def deserialize_text_line(text_line, data):
     """
     text_line.body = data.get("body", "")
 
-
-def deserialize_text(node, data):
+def deserialize_text(data):
     """Deserialize text
 
     Args:
@@ -216,8 +205,6 @@ def deserialize_text(node, data):
 
     return text
 
-
-
 def deserialize_node(node_data, nodes):
     """Deserialize node
 
@@ -237,7 +224,8 @@ def deserialize_node(node_data, nodes):
 
     # Node tree has to be done before other properties like inputs and outputs
     if "node_tree" in node_data:
-        new_node.node_tree = bpy.data.node_groups.new(node_data["node_tree"]["name"], "ShaderNodeTree")
+        new_node.node_tree = bpy.data.node_groups.new(node_data["node_tree"]["name"],
+                                                      "ShaderNodeTree")
         deserialize_node_tree(new_node.node_tree, node_data["node_tree"])
         node_data.pop("node_tree")
 
@@ -262,14 +250,12 @@ def deserialize_node(node_data, nodes):
         elif prop_name == "outputs":
             deserialize_outputs(new_node, prop_value)
         elif prop_name == "script":
-            new_node.script = deserialize_text(new_node, prop_value)
+            new_node.script = deserialize_text(prop_value)
         elif prop_name == "parent" and prop_value in nodes:
             new_node.parent = nodes[prop_value]
         else:
             setattr(new_node, prop_name, prop_value)
     return new_node
-
-
 
 def get_node_socket_base_type(socket_type):
     """Get base type of node socket.
@@ -295,7 +281,6 @@ def get_node_socket_base_type(socket_type):
             return usable_type
     return usable_type_array[0]
 
-
 def get_socket_by_identifier(node, identifier, socket_type="INPUT"):
     """Get socket by identifier
 
@@ -318,7 +303,6 @@ def get_socket_by_identifier(node, identifier, socket_type="INPUT"):
             return socket
     return None
 
-
 def create_socket(node_tree, socket_name, description, in_out, socket_type):
     """Create new socket on the ShaderNodeGroup
 
@@ -337,7 +321,6 @@ def create_socket(node_tree, socket_name, description, in_out, socket_type):
         in_out=in_out,
         socket_type=socket_type,
     )
-
 
 def deserialize_link(node_tree, node_names, link_data):
     """Deserialize link
@@ -401,7 +384,6 @@ def deserialize_link(node_tree, node_names, link_data):
 
     return output_socket, input_socket
 
-
 def build_node_parent_name_map(data, node_tree):
     """
     Build a mapping of old node names to new node names (for frames).
@@ -418,7 +400,7 @@ def build_node_parent_name_map(data, node_tree):
 
     # Create nodes for frames first to ensure they exist
     for node_name, node_data in data["nodes"].items():
-        if node_data["type"] == "NodeFrame": 
+        if node_data["type"] == "NodeFrame":
             new_node = deserialize_node(node_data, node_tree.nodes)
             new_node.name = node_data["name"]
 
@@ -427,7 +409,7 @@ def build_node_parent_name_map(data, node_tree):
                 node_parent_name[node_name] = new_node.name
             else:
                 node_parent_name[node_name] = node_name
-                        
+
             node_frame_location[node_parent_name[node_name]] = new_node.location
             #new_node.location = [0, 0]
 
@@ -437,7 +419,6 @@ def build_node_parent_name_map(data, node_tree):
 
     return node_parent_name, node_frame_location
 
-
 def update_parent_references(data, node_parent_name):
     """
     Update the parent references in the serialized node data based on the new node names.
@@ -446,7 +427,7 @@ def update_parent_references(data, node_parent_name):
         data: Serialized data containing the node structure.
         node_parent_name: A mapping from old node names to new node names.
     """
-    for node_name, node_data in data["nodes"].items():
+    for _, node_data in data["nodes"].items():
         # Check if the node has a parent frame
         if "parent" in node_data and node_data["parent"] in node_parent_name:
             # Update the parent frame to the new name
@@ -475,7 +456,8 @@ def deserialize_node_tree(node_tree, data):
     for node_name, node_data in data["nodes"].items():
         node_names[node_name] = deserialize_node(node_data, node_tree.nodes)
         # Setting correct location for frames
-        if node_names[node_name].parent and isinstance(node_names[node_name].parent, bpy.types.NodeFrame):
+        if node_names[node_name].parent and isinstance(node_names[node_name].parent,
+                                                       bpy.types.NodeFrame):
             node_frame_name = node_names[node_name].parent.name
             if node_frame_name in node_frame_location:
                 location = node_frame_location[node_frame_name]
@@ -492,7 +474,6 @@ def deserialize_node_tree(node_tree, data):
         # Create new link
         if input_socket and output_socket:
             node_tree.links.new(input_socket, output_socket)
-
 
 def decode_data(base64_encoded, material):
     """Decode data
@@ -550,8 +531,6 @@ class NodeRunnerImport(bpy.types.Operator):
         if self.my_node_runner_string == "":
             self.report({"INFO"}, "No Node Runner Hash String provided")
             return {"CANCELLED"}
-        
-        
 
         result = decode_data(self.my_node_runner_string.split("__NR", 1)[1], bpy.context.material)
 
@@ -606,8 +585,6 @@ class NodeRunnerImportContextMenu(bpy.types.Operator):
         """
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
-
-
 
 # pylint: disable=unused-argument
 def menu_func_node_runner_import(self, context):

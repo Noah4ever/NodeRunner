@@ -1,3 +1,6 @@
+"""
+This module provides serialize functions and classes.
+"""
 
 import pickle
 import zlib
@@ -15,7 +18,6 @@ def serialize_color(color):
     """
     return list(color)
 
-
 def serialize_vector(vector):
     """Serialize vector
 
@@ -26,7 +28,6 @@ def serialize_vector(vector):
     """
     return list(vector)
 
-
 def serialize_euler(euler):
     """Serialize euler
 
@@ -36,7 +37,6 @@ def serialize_euler(euler):
       Serialized euler as list
     """
     return list(euler)
-
 
 def serialize_color_ramp(node):
     """Serialize color ramp
@@ -114,7 +114,7 @@ def serialize_curve_mapping(node):
         "clip_max_y": node.mapping.clip_max_y,
         "clip_min_x": node.mapping.clip_min_x,
         "clip_min_y": node.mapping.clip_min_y,
-        "curves": serialize_attr(node, node.mapping.curves), 
+        "curves": serialize_attr(node, node.mapping.curves),
         "extend": node.mapping.extend,
         "tone": node.mapping.tone,
         "use_clip": node.mapping.use_clip,
@@ -135,7 +135,6 @@ def serialize_curve_map(node, curve_map: bpy.types.CurveMap):
         "points": serialize_attr(node, curve_map.points),
     }
 
-
 def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
     """Serialize curve map point
 
@@ -151,7 +150,6 @@ def serialize_curve_map_point(node, curve_map_point: bpy.types.CurveMapPoint):
         "location": serialize_attr(node, curve_map_point.location),
         "select": curve_map_point.select,
     }
-
 
 def serialize_image(image: bpy.types.Image):
     """Serialize image.
@@ -204,7 +202,6 @@ def serialize_text(text: bpy.types.Text):
         "use_module": text.use_module,
     }
 
-
 def serialize_node_frame(node: bpy.types.NodeFrame):
     """Serialize node frame
 
@@ -218,7 +215,6 @@ def serialize_node_frame(node: bpy.types.NodeFrame):
         "shrink": node.shrink,
         "text": serialize_text(node.text),
     }
-
 
 def serialize_attr(node, attr):
     """Serialize attribute of a node
@@ -277,7 +273,6 @@ def serialize_attr(node, attr):
             type(attr),
         )
     return attr
-
 
 def serialize_node(node):
     """Serialize node properties
@@ -342,7 +337,6 @@ def serialize_node(node):
     node_dict["label"] = node.label
     return node_dict
 
-
 def serialize_node_tree(node_tree, selected_node_names=None):
     """Serialize node tree
 
@@ -365,7 +359,7 @@ def serialize_node_tree(node_tree, selected_node_names=None):
         for node_name in selected_node_names:
             if node_name in nodes:
                 selected_nodes.append(nodes[node_name])
-            
+
     # Serialize selected nodes
     for node in selected_nodes:
         node_dict = serialize_node(node)
@@ -410,7 +404,6 @@ def encode_data(node_tree, selected_node_names=None):
     print(base64_encoded)
     print(len(base64_encoded))
     return base64_encoded
-
 
 class NodeRunnerExport(bpy.types.Operator):
     """Class for export dialog"""
@@ -463,8 +456,11 @@ class NodeRunnerExport(bpy.types.Operator):
         selected_nodes = bpy.context.selected_nodes
         selected_node_names = []
         for node in selected_nodes:
-            # NodeGroupInput and NodeGroupOutput are generated automatically by a NodeGroup and cannot be exported/imported
-            if selected_nodes and not isinstance(node, (bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput)):
+            # NodeGroupInput and NodeGroupOutput are generated automatically by a
+            # NodeGroup and cannot be exported/imported
+            if selected_nodes and not isinstance(node,
+                                                 (bpy.types.NodeGroupInput,
+                                                  bpy.types.NodeGroupOutput)):
                 selected_node_names.append(node.name)
 
         compress_nodes = encode_data(
@@ -500,16 +496,17 @@ class NodeRunnerExportContextMenu(bpy.types.Operator):
         if selected_node_names is None:
             self.report({"WARNING"}, "No nodes selected!")
             return {"CANCELLED"}
-        
+
         nodes = bpy.context.space_data.edit_tree.nodes
         i = 0
         for selected_node in selected_node_names:
-            if not isinstance(nodes[selected_node], (bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput)):
+            if not isinstance(nodes[selected_node], 
+                              (bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput)):
                 i += 1
         if i == 0:
             self.report({"WARNING"}, "No valid nodes selected!")
             return {"CANCELLED"}
-                
+
         bpy.ops.object.node_runner_export("INVOKE_DEFAULT")
         return {"FINISHED"}
 

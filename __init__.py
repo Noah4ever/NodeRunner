@@ -6,8 +6,13 @@ It exports the shader nodes to a compressed and base64
 encoded string that can be easily shared via a text
 messager or comments in a video.
 """
+
+import bpy
+from . import node_runner_deserialize
+from . import node_runner_serialize
+
 bl_info = {
-    "name": "NodeRunner",
+    "name": "Node Runner",
     "author": "Noah Thiering, Julius Ewert",
     "version": (0, 98),
     "blender": (4, 2, 2),
@@ -16,10 +21,6 @@ bl_info = {
     "doc_url": "docs/",
     "category": "Node",
 }
-
-import bpy
-from . import node_runner_deserialize
-from . import node_runner_serialize
 
 def register():
     """Register classes"""
