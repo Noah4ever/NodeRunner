@@ -1,0 +1,16 @@
+schema_version = "1.0.0"
+
+id = "node_runner"
+version = "0.98"
+name = "Node Runner"
+tagline = "Tool to easily import and export shader nodes as a string"
+maintainer = "Noah Thiering <noah.thiering@gmail.com>"
+
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+# https://docs.blender.org/manual/en/dev/advanced/extensions/licenses.html
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
