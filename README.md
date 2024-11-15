@@ -18,9 +18,9 @@ With this addon, sharing and reusing shader node setups becomes as simple as cop
 
 ## Development
 
-1. Download and open the `.blend` file that includes the addon script.
-2. In Blender, run the script once using the **Text Editor** or execute it from the **Scripting** tab.
-3. Once the script is executed, you’re ready to use the Node Runner features!
+1. Clones this repository into your `addons_core` folder (should be at your local blender installation, example: `blender-4.2.2-windows-x64\4.2\scripts\addons_core`).
+2. Open Blender and go into "`Edit > Preferences > Add-Ons`" and search for `Node Runner`.
+3. Check the checkbox.
 
 ### Documentation
 
