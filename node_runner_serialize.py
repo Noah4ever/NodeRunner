@@ -1,5 +1,5 @@
 """
-This module provides serialize functions and classes.
+This module provides serialize functions and classes for node runner.
 """
 
 import pickle

@@ -1,5 +1,5 @@
 """
-This module provides deserialize functions and classes.
+This module provides deserialize functions and classes for node runner.
 """
 
 import binascii
