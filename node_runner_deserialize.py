@@ -205,7 +205,6 @@ def deserialize_text(data):
 
     return text
 
-#pylint: disable=too-many-arguments
 def deserialize_node(node_data, nodes):
     """Deserialize node
 
@@ -236,6 +235,7 @@ def deserialize_node(node_data, nodes):
             continue
 
         # Special handling for complex types
+        #pylint: disable=too-many-arguments
         if prop_name == "color_ramp":
             deserialize_color_ramp(new_node, prop_value)
         elif prop_name == "color_mapping":
@@ -500,6 +500,7 @@ def decode_data(base64_encoded, material):
         deserialized_data = pickle.loads(decompressed_data)
     except (zlib.error, pickle.UnpicklingError, binascii.Error):
         return ("CANCELLED", "Decoding error")
+    #pylint: disable=broad-exception-caught
     except (Exception,) as e:
         return ("CANCELLED", f"Decoding error: {e}")
 
